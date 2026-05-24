@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import type { AuthMode, AuthResponse } from '../../types/Auth/types';
 import { login, signup } from '../../hooks/api'
 
-const Auth: React.FC = () => {
+const Auth = () => {
   const [mode, setMode] = useState<AuthMode>('login');
 
   //particulars
@@ -27,29 +27,14 @@ const Auth: React.FC = () => {
     setIsLoading(true);
     setError(null);
 
-    // Determine payload and endpoint based on current mode
-    const endpoint = mode === 'login' ? login : signup;
-    const payload = mode === 'login' 
-      ? { email, password } 
-      : { name, email, password };
-
     try {
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      const data: AuthResponse = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || `Failed to ${mode}`);
+      if (mode === 'login') {
+        await login({ email, password });
+      } else {
+        await signup({ name, email, password });
       }
-
-      console.log(`${mode} successful!`, data);
-
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
+      setError('An error occurred. Please try again.');
     } finally {
       setIsLoading(false);
     }
