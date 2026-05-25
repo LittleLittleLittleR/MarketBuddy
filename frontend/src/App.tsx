@@ -1,11 +1,7 @@
-import { useState } from 'react'
+type Props = {}
 
-function App() {
+export default function App({ }: Props) {
   return (
-    <>
-      <h1>MarketBuddy</h1>
-    </>
+    <div>Hello world</div>
   )
 }
-
-export default App
