@@ -2,6 +2,6 @@ type Props = {}
 
 export default function App({ }: Props) {
   return (
-    <div></div>
+    <div>Hello world</div>
   )
 }

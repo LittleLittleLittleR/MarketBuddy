@@ -44,29 +44,47 @@ export type Database = {
           id: number
           is_default: boolean | null
           name: string
-          user_id: number
+          user_id: string
         }
         Insert: {
           id?: number
           is_default?: boolean | null
           name: string
-          user_id: number
+          user_id: string
         }
         Update: {
           id?: number
           is_default?: boolean | null
           name?: string
-          user_id?: number
+          user_id?: string
         }
         Relationships: [
           {
             foreignKeyName: "portfolios_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
-            referencedRelation: "users"
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          id: string
+          username: string | null
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          username?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          username?: string | null
+        }
+        Relationships: []
       }
       stocks: {
         Row: {
@@ -149,45 +167,21 @@ export type Database = {
           },
         ]
       }
-      users: {
-        Row: {
-          created_at: string
-          email: string
-          id: number
-          password: string
-          username: string
-        }
-        Insert: {
-          created_at?: string
-          email: string
-          id?: number
-          password: string
-          username: string
-        }
-        Update: {
-          created_at?: string
-          email?: string
-          id?: number
-          password?: string
-          username?: string
-        }
-        Relationships: []
-      }
       watchlist_stocks: {
         Row: {
           id: number
           stock_ticker: string
-          user_id: number
+          user_id: string
         }
         Insert: {
           id?: number
           stock_ticker: string
-          user_id: number
+          user_id: string
         }
         Update: {
           id?: number
           stock_ticker?: string
-          user_id?: number
+          user_id?: string
         }
         Relationships: [
           {
@@ -201,7 +195,7 @@ export type Database = {
             foreignKeyName: "watchlist_stocks_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
-            referencedRelation: "users"
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]

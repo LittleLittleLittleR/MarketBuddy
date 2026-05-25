@@ -1,10 +1,6 @@
 // src/types/models.ts
 import type { Database } from "./supabase";
 
-// Convenience row/insert types derived from generated types
-export type User = Database["public"]["Tables"]["users"]["Row"];
-export type UserInsert = Database["public"]["Tables"]["users"]["Insert"];
-
 export type Stock = Database["public"]["Tables"]["stocks"]["Row"];
 export type StockInsert = Database["public"]["Tables"]["stocks"]["Insert"];
 
