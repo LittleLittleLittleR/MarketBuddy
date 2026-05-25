@@ -5,26 +5,49 @@ import { Button } from '../../../components/ui/button.tsx';
 import { Label } from '../../../components/ui/label.tsx';
 import { Input } from '../../../components/ui/input.tsx';
 
-export default function Login() {
+
+export default function SignUpPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
-  const navigate = useNavigate()
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
     setLoading(true)
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { error } = await supabase.auth.signUp({ email, password })
 
     if (error) {
       setError(error.message)
-      setLoading(false)
     } else {
-      navigate('/dashboard')
+      setSuccess(true)
     }
+    setLoading(false)
+  }
+
+  if (success) {
+    return (
+      <main className="flex min-h-screen justify-center bg-background px-4">
+        <div className="w-full max-w-sm space-y-6 text-center">
+          <div className="space-y-2">
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+              Check your email
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              We&apos;ve sent you a confirmation link to {email}
+            </p>
+          </div>
+          <a href="/login">
+            <Button variant="outline" className="w-full">
+              Back to sign in
+            </Button>
+          </a>
+        </div>
+      </main>
+    )
   }
 
   return (
@@ -32,14 +55,14 @@ export default function Login() {
       <div className="w-full max-w-sm space-y-8">
         <div className="space-y-2 text-center">
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-            Welcome back
+            Create an account
           </h1>
           <p className="text-sm text-muted-foreground">
-            Enter your credentials to sign in
+            Enter your email to get started
           </p>
         </div>
 
-        <form onSubmit={handleLogin} className="space-y-4">
+        <form onSubmit={handleSignUp} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
@@ -61,6 +84,7 @@ export default function Login() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              minLength={6}
             />
           </div>
 
@@ -69,14 +93,14 @@ export default function Login() {
           )}
 
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? 'Signing in...' : 'Sign in'}
+            {loading ? 'Creating account...' : 'Create account'}
           </Button>
         </form>
 
         <p className="text-center text-sm text-muted-foreground">
-          Don&apos;t have an account?{' '}
-          <a href="/signup" className="text-foreground underline underline-offset-4 hover:text-primary">
-            Sign up
+          Already have an account?{' '}
+          <a href="/login" className="text-foreground underline underline-offset-4 hover:text-primary">
+            Sign in
           </a>
         </p>
       </div>
