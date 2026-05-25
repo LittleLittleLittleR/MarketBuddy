@@ -9,8 +9,11 @@
     }
   ],
   "compilerOptions": {
-    "types": [
-      "vite-plugin-pages/client-react"
-    ]
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ]
+    }
   }
 }
