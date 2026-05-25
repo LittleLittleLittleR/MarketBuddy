@@ -1,4 +1,3 @@
-// src/types/models.ts
 import type { Database } from "./supabase";
 
 export type Stock = Database["public"]["Tables"]["stocks"]["Row"];
