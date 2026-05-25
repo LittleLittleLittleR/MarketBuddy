@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { supabase } from '../../lib/supabase'
+import { supabase } from '@/lib/supabase'
 import { useNavigate } from 'react-router-dom'
-import { Button } from '../../../components/ui/button.tsx';
-import { Label } from '../../../components/ui/label.tsx';
-import { Input } from '../../../components/ui/input.tsx';
+import { Button } from '@/components/ui/button.tsx'
+import { Label } from '@/components/ui/label.tsx'
+import { Input } from '@/components/ui/input.tsx'
 
 export default function Login() {
   const [email, setEmail] = useState('')

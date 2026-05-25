@@ -1,4 +1,4 @@
-import { signOut } from "../../lib/supabase";
+import { signOut } from "@/lib/supabase";
 
 const Home = () => {
   return (

@@ -1,9 +1,8 @@
-import { useState } from 'react'
-import { supabase } from '../../lib/supabase'
-import { useNavigate } from 'react-router-dom'
-import { Button } from '../../../components/ui/button.tsx';
-import { Label } from '../../../components/ui/label.tsx';
-import { Input } from '../../../components/ui/input.tsx';
+import { type ChangeEvent, type FormEvent, useState } from 'react'
+import { supabase } from '@/lib/supabase'
+import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
 
 
 export default function SignUpPage() {
@@ -13,7 +12,7 @@ export default function SignUpPage() {
   const [success, setSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
 
-  const handleSignUp = async (e: React.FormEvent) => {
+  const handleSignUp = async (e: FormEvent) => {
     e.preventDefault()
     setError('')
     setLoading(true)
@@ -70,7 +69,7 @@ export default function SignUpPage() {
               type="email"
               placeholder="you@example.com"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
               required
             />
           </div>
@@ -82,7 +81,7 @@ export default function SignUpPage() {
               type="password"
               placeholder="••••••••"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
               required
               minLength={6}
             />
