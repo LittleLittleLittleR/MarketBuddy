@@ -1,0 +1,8 @@
+fastapi[standard]
+uvicorn[standard]
+supabase
+python-dotenv
+brightdata-sdk
+openai
+pydantic
+httpx

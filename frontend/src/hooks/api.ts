@@ -1,6 +1,6 @@
 import type { AuthResponse } from '../types/Auth/types';
 
-const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 
 // AUTH
@@ -19,6 +19,11 @@ const login = async (payload: LoginPayload): Promise<AuthResponse> => {
     });
 
     const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Login failed');
+    }
+
     return data;
 
   } catch (error) {
@@ -44,6 +49,11 @@ const signup = async (payload: SignupPayload): Promise<AuthResponse> => {
     });
 
     const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Signup failed');
+    }
+
     return data;
 
   } catch (error) {
