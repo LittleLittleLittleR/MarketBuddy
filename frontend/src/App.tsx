@@ -4,7 +4,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import Login from './pages/Auth/Login';
 import Home from './pages/Home/Home';
 
-function App() {
+export default function App({ }: Props) {
   return (
     <BrowserRouter>
       <AuthProvider>
