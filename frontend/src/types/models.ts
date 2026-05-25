@@ -1,4 +1,3 @@
-// src/types/models.ts
 import type { Database } from "./supabase";
 
 // Convenience row/insert types derived from generated types
