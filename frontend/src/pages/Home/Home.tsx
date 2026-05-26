@@ -25,6 +25,8 @@ import {
 } from '@/components/ui/avatar'
 
 import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Separator } from '@/components/ui/separator'
 
 
 type WatchlistStock = {
@@ -134,47 +136,53 @@ const Home = () => {
           </p>
         </div>
 
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Ticker</TableHead>
-                <TableHead>Company</TableHead>
-                <TableHead>Price</TableHead>
-                <TableHead>Change</TableHead>
-              </TableRow>
-            </TableHeader>
+        <Separator className="mb-6" />
 
-            <TableBody>
-              {watchlist.map((stock) => (
-                <TableRow key={stock.ticker}>
-                  <TableCell className="font-medium">
-                    {stock.ticker}
-                  </TableCell>
-
-                  <TableCell>
-                    {stock.company_name}
-                  </TableCell>
-
-                  <TableCell>
-                    ${stock.current_price.toFixed(2)}
-                  </TableCell>
-
-                  <TableCell
-                    className={
-                      stock.change_percent >= 0
-                        ? 'text-green-500'
-                        : 'text-red-500'
-                    }
-                  >
-                    {stock.change_percent >= 0 ? '+' : ''}
-                    {stock.change_percent.toFixed(2)}%
-                  </TableCell>
+        <Card>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Ticker</TableHead>
+                  <TableHead>Company</TableHead>
+                  <TableHead>Price</TableHead>
+                  <TableHead>Change</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+
+              <TableBody>
+                {watchlist.map((stock) => (
+                  <TableRow key={stock.ticker}>
+                    <TableCell className="font-medium">
+                      {stock.ticker}
+                    </TableCell>
+
+                    <TableCell>
+                      {stock.company_name}
+                    </TableCell>
+
+                    <TableCell>
+                      ${stock.current_price.toFixed(2)}
+                    </TableCell>
+
+                    <TableCell
+                      className={
+                        stock.change_percent >= 0
+                          ? 'text-green-500'
+                          : 'text-red-500'
+                      }
+                    >
+                      {stock.change_percent >= 0 ? '+' : ''}
+                      {stock.change_percent.toFixed(2)}%
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       </section>
-      
+
     </div>
   );
 };
