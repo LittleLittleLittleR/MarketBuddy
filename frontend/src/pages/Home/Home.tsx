@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase'
 import { signOut } from "@/lib/supabase";
-import { useNavigate } from 'react-router-dom';
+import { profileService } from "@/db/profile";
 
 import {
   Table,
@@ -28,7 +29,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 
-
+// dummy data type
 type WatchlistStock = {
   ticker: string
   company_name: string
@@ -39,6 +40,7 @@ type WatchlistStock = {
 const Home = () => {
 
   const [userEmail, setUserEmail] = useState('')
+  const [username, setUsername] = useState('')
   const [watchlist, setWatchlist] = useState<WatchlistStock[]>([])
 
   const navigate = useNavigate()
@@ -55,8 +57,10 @@ const Home = () => {
       }
 
       setUserEmail(user.email || '')
+      const profile = await profileService.getMyProfile()
+      setUsername(profile.username || '')
 
-      // Example dummy data for now
+      // dummy data for now
       setWatchlist([
         {
           ticker: 'AAPL',
@@ -82,11 +86,6 @@ const Home = () => {
     fetchUser()
   }, [navigate])
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut()
-    navigate('/login')
-  }
-
   return (
     <div>
       {/* Navbar */}
@@ -100,7 +99,7 @@ const Home = () => {
 
           <div className="flex items-center gap-4">
             <span className="hidden text-sm text-muted-foreground md:block">
-              {userEmail}
+              {username || userEmail}
             </span>
 
             <DropdownMenu>
@@ -108,14 +107,14 @@ const Home = () => {
                 <Button variant="ghost" className="h-10 w-10 rounded-full p-0">
                   <Avatar>
                     <AvatarFallback>
-                      {userEmail.charAt(0).toUpperCase()}
+                      {username.charAt(0).toUpperCase() || userEmail.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
 
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={handleLogout}>
+                <DropdownMenuItem onClick={signOut}>
                   Logout
                 </DropdownMenuItem>
               </DropdownMenuContent>
