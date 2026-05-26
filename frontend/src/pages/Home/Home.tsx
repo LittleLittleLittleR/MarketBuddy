@@ -12,6 +12,18 @@ import {
   TableRow,
 } from '@/components/ui/table'
 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+
+import {
+  Avatar,
+  AvatarFallback,
+} from '@/components/ui/avatar'
+
 import { Button } from '@/components/ui/button'
 
 
@@ -89,13 +101,23 @@ const Home = () => {
               {userEmail}
             </span>
 
-            <Button variant="ghost" className="h-10 w-10 rounded-full p-0">
-                  {userEmail.charAt(0).toUpperCase()}
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="h-10 w-10 rounded-full p-0">
+                  <Avatar>
+                    <AvatarFallback>
+                      {userEmail.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
 
-            <Button variant="outline" className="h-10" onClick={handleLogout}>
-              Logout
-            </Button>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleLogout}>
+                  Logout
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </header>
