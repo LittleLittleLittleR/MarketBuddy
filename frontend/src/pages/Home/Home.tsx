@@ -3,6 +3,15 @@ import { supabase } from '@/lib/supabase'
 import { signOut } from "@/lib/supabase";
 import { useNavigate } from 'react-router-dom';
 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+
 import { Button } from '@/components/ui/button'
 
 
@@ -90,6 +99,60 @@ const Home = () => {
           </div>
         </div>
       </header>
+
+      {/* Content */}
+      <section className="mx-auto max-w-7xl p-6">
+        <div className="mb-6">
+          <h2 className="text-3xl font-bold tracking-tight">
+            Your Watchlist
+          </h2>
+
+          <p className="text-muted-foreground">
+            Track your favourite stocks in one place
+          </p>
+        </div>
+
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Ticker</TableHead>
+                <TableHead>Company</TableHead>
+                <TableHead>Price</TableHead>
+                <TableHead>Change</TableHead>
+              </TableRow>
+            </TableHeader>
+
+            <TableBody>
+              {watchlist.map((stock) => (
+                <TableRow key={stock.ticker}>
+                  <TableCell className="font-medium">
+                    {stock.ticker}
+                  </TableCell>
+
+                  <TableCell>
+                    {stock.company_name}
+                  </TableCell>
+
+                  <TableCell>
+                    ${stock.current_price.toFixed(2)}
+                  </TableCell>
+
+                  <TableCell
+                    className={
+                      stock.change_percent >= 0
+                        ? 'text-green-500'
+                        : 'text-red-500'
+                    }
+                  >
+                    {stock.change_percent >= 0 ? '+' : ''}
+                    {stock.change_percent.toFixed(2)}%
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+      </section>
+      
     </div>
   );
 };
