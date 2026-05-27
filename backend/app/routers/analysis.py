@@ -2,6 +2,7 @@ import asyncio
 import traceback
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import InstanceOf
+from app.config import settings
 from app.services.stock_analysis import StockAnalysisService
 from app.dependencies import get_stock_service
 from app.schemas.scraping import StocksRequest
@@ -37,10 +38,12 @@ async def analyse_stocks(
                 status_code=404, detail=f"No news found for ticker: {ticker}"
             )
         context = "\n".join([f"[{a.title}: {a.snippet}" for a in links])
-        print()
-        print("Context: ")
-        print(context)
-        print()
+
+        if settings.debug:
+            print()
+            print("Context: ")
+            print(context)
+            print()
         return await service.scrape_and_summarise(ticker, context)
 
     results = await asyncio.gather(

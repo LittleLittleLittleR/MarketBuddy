@@ -1,13 +1,12 @@
-import time
 from brightdata import BrightDataClient
 from typing import List
 from openai import AsyncOpenAI
-import asyncio
 import httpx
+from upstash_redis.asyncio import Redis
+
+from app.repositories.summary_repo import SummaryRepository
 from app.config import settings
 from app.schemas.scraping import NewsArticle
-from upstash_redis.asyncio import Redis
-from supabase import AsyncClient
 
 headers = {
     "Authorization": f"Bearer {settings.brightdata_api_token}",
@@ -16,11 +15,17 @@ headers = {
 
 
 class StockAnalysisService:
-    def __init__(self, redis_client: Redis, supabase_client: AsyncClient):
+    def __init__(
+        self,
+        redis_client: Redis,
+        summary_repository: SummaryRepository,
+    ):
         self.bd_client = BrightDataClient(token=settings.brightdata_api_token)
         self.ai_client = AsyncOpenAI(api_key=settings.openai_api_key)
         self.redis_client = redis_client
-        self.supabase_client = supabase_client
+        self.summary_repository = (
+            summary_repository  # for data access on supabase summaries table
+        )
 
     async def fetch_news_links(self, ticker: str) -> List[NewsArticle]:
         try:
@@ -72,7 +77,7 @@ class StockAnalysisService:
             raise RuntimeError(f"Failed to fetch news for {ticker}: {e}") from e
 
     async def scrape_and_summarise(self, ticker: str, context: str):
-        prompt = f"You are a professional stock analysis that does deep research into stock movement and news of {ticker}. With all news snippets about the following stock Information. Return 'Summary: [text]'. Tell me everything that happened based on the context. Always ensure that the data is verified before returning the result. Give me ALL the key points within the summary"
+        prompt = f"You are a professional stock analysis that does deep research into stock movement and news of {ticker}. With all news snippets about the following stock Information. Return '[text]'. Tell me everything that happened based on the context. Always ensure that the data is verified before returning the result. Give me ALL the key points within the summary"
 
         # return context
         response = await self.ai_client.chat.completions.create(
@@ -108,12 +113,12 @@ class StockAnalysisService:
                     f"[STOCK_ANALYSIS:SAVE_DAILY_SUMMARY] Failed to insert daily summary into Redis for {ticker}: {e}"
                 ) from e
 
-        if self.supabase_client:
+        if self.summary_repository:
             try:
-                await self.supabase_client.table("summaries").insert(
-                    {"ticker": ticker_upper, "summary": summary_text}
-                ).execute()
+                await self.summary_repository.upsert_summary(
+                    ticker=ticker, summary_text=summary_text
+                )
             except Exception as e:
                 raise RuntimeError(
-                    f"[STOCK_ANALYSIS:SAVE_DAILY_SUMMARY] Failed to insert daily summary into Supabase for {ticker}: {e}"
+                    f"[STOCK_ANALYSIS:SAVE_DAILY_SUMMARY] Failed to upsert daily summary into Supabase for {ticker}: {e}"
                 ) from e
