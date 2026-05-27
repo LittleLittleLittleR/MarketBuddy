@@ -20,6 +20,16 @@ async def analyse_stocks(
 
     # helper function
     async def analyse_one(ticker: str):
+
+        # check if already in redis cache
+        cache_key = f"stock:{ticker.upper()}:summary:daily"
+        cached_record = await service.redis_client.get(cache_key)
+        if cached_record:
+            print(f"Cached record for {ticker} found!")
+            return cached_record
+        else:
+            print(f"No cached record found for {ticker}! Performing scraping now...")
+
         links = await service.fetch_news_links(ticker=ticker)
         if not links:
             print("HTTPException for: ", ticker)
@@ -27,7 +37,11 @@ async def analyse_stocks(
                 status_code=404, detail=f"No news found for ticker: {ticker}"
             )
         context = "\n".join([f"[{a.title}: {a.snippet}" for a in links])
-        return await service.scrape_and_summarise(context)
+        print()
+        print("Context: ")
+        print(context)
+        print()
+        return await service.scrape_and_summarise(ticker, context)
 
     results = await asyncio.gather(
         *[analyse_one(t) for t in stocks.body], return_exceptions=True
