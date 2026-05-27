@@ -6,3 +6,4 @@ brightdata-sdk
 openai
 pydantic
 httpx
+pydantic-settings
