@@ -6,3 +6,6 @@ brightdata-sdk
 openai
 pydantic
 httpx
+pydantic-settings
+upstash_redis
+yfinance
