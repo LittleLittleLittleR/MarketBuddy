@@ -1,7 +1,9 @@
+import time
 from brightdata import BrightDataClient
-from openai import OpenAI
 from typing import List
-import requests
+from openai import AsyncOpenAI
+import asyncio
+import httpx
 from app.config import settings
 from app.schemas.scraping import NewsArticle
 
@@ -14,54 +16,54 @@ headers = {
 class StockAnalysisService:
     def __init__(self):
         self.bd_client = BrightDataClient(token=settings.brightdata_api_token)
-        self.ai_client = OpenAI(api_key=settings.openai_api_key)
+        self.ai_client = AsyncOpenAI(api_key=settings.openai_api_key)
 
     async def fetch_news_links(self, ticker: str) -> List[NewsArticle]:
-        restricted_query = f"{ticker}+stock+news"
+        try:
+            restricted_query = f"{ticker}+stock+news"
 
-        # tbm=nws: news tab
-        # tbs=qdr:d: Past 24 hours
-        search_url = (
-            f"https://www.google.com/search?q={restricted_query}&tbm=nws&tbs=qdr:d"
-        )
+            # tbm=nws: news tab
+            # tbs=qdr:d: Past 24 hours
+            search_url = f"https://www.google.com/search?q={restricted_query}&tbm=nws&tbs=qdr:d&num=20"
 
-        data = {
-            "url": search_url,
-            "format": "raw",
-            "zone": settings.BRIGHTDATA_SERP_ZONE,
-        }
+            data = {
+                "url": search_url,
+                "format": "raw",
+                "zone": settings.BRIGHTDATA_SERP_ZONE,
+            }
 
-        # send request to start scraping
-        response = requests.post(
-            "https://api.brightdata.com/request", json=data, headers=headers
-        )
-        res_json = response.json()
-        print("Response json: ", res_json)
+            async with httpx.AsyncClient(timeout=15) as client:
+                response = await client.post(
+                    "https://api.brightdata.com/request", json=data, headers=headers
+                )
 
-        news_results = res_json.get("news", [])
+            res_json = response.json()
+            news_results = res_json.get("news", [])
 
-        # fallback if got nothing
-        if not news_results:
-            news_results = res_json.get("organic", [])
+            # fallback if got nothing
+            if not news_results:
+                news_results = res_json.get("organic", [])
 
-        # check if got result again, if dh then return empty list
-        if not news_results:
-            print(f"No news found for {ticker}")
-            return []
+            # check if got result again, if dh then return empty list
+            if not news_results:
+                print(f"No news found for {ticker}")
+                return []
 
-        articles = []
-        for item in news_results:
-            article = NewsArticle(
-                title=item.get("title", "Untitled"),
-                url=item.get("link", ""),
-                snippet=item.get("description", item.get("snippet", "")),
-            )
+            articles = []
+            for item in news_results:
+                article = NewsArticle(
+                    title=item.get("title", "Untitled"),
+                    url=item.get("link", ""),
+                    snippet=item.get("description", item.get("snippet", "")),
+                )
 
-            if article.url:
-                articles.append(article)
+                if article.url:
+                    articles.append(article)
 
-        print(f"Successfully fetched {len(articles)} links for {ticker}")
-        return articles
+            print(f"Successfully fetched {len(articles)} links for {ticker}")
+            return articles
+        except Exception as e:
+            raise RuntimeError(f"Failed to fetch news for {ticker}: {e}") from e
 
     async def scrape_all_links(self, articles: List[NewsArticle]):
         for i, article in enumerate(articles):
@@ -90,7 +92,8 @@ class StockAnalysisService:
     async def scrape_and_summarise(self, context: str):
         prompt = "You are a professional stock analysis that does deep research into stock movement and news. With all news about the following stock Information. Return 'Summary: [text]'. Tell me everything that happened based on the context. Always ensure that the data is verified before returning the result. Give me ALL the key points within the summary"
 
-        response = self.ai_client.chat.completions.create(
+        # return context
+        response = await self.ai_client.chat.completions.create(
             model="gpt-4o",
             messages=[
                 {"role": "system", "content": prompt},
@@ -105,5 +108,5 @@ class StockAnalysisService:
         if ai_text is None:
             ai_text = ""
 
-        print("Scrape and Summarise Response: ", ai_text)
+        # print("Scrape and Summarise Response: ", ai_text)
         return ai_text

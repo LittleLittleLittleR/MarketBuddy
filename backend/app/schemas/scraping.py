@@ -21,3 +21,7 @@ class StockReport(BaseModel):
     ticker: str
     count: int
     articles: List[ArticleSummary]
+
+
+class StocksRequest(BaseModel):
+    body: List[str]
