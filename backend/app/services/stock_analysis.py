@@ -90,8 +90,7 @@ class StockAnalysisService:
         if ai_text is None:
             ai_text = ""
         try:
-            cache_key = f"stock:{ticker.upper()}:summary:daily"
-            await self.redis_client.set(cache_key, ai_text, ex=86400)
+            await self.save_daily_summary(ticker=ticker, summary_text=ai_text)
         except Exception as e:
             raise RuntimeError(f"Failed to save daily summary for {ticker}: {e}") from e
 
@@ -102,12 +101,19 @@ class StockAnalysisService:
 
         if self.redis_client:
             cache_key = f"stock:{ticker_upper}:summary:daily"
-            self.redis_client.set(cache_key, summary_text, ex=86400)
+            try:
+                await self.redis_client.set(cache_key, summary_text, ex=86400)
+            except Exception as e:
+                raise RuntimeError(
+                    f"[STOCK_ANALYSIS:SAVE_DAILY_SUMMARY] Failed to insert daily summary into Redis for {ticker}: {e}"
+                ) from e
 
-        return
-
-        # still need to configure db
         if self.supabase_client:
-            await self.supabase_client.table("summaries").insert(
-                {"ticker": ticker_upper, "summary": summary_text}
-            ).execute()
+            try:
+                await self.supabase_client.table("summaries").insert(
+                    {"ticker": ticker_upper, "summary": summary_text}
+                ).execute()
+            except Exception as e:
+                raise RuntimeError(
+                    f"[STOCK_ANALYSIS:SAVE_DAILY_SUMMARY] Failed to insert daily summary into Supabase for {ticker}: {e}"
+                ) from e

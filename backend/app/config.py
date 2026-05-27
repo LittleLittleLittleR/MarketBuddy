@@ -14,7 +14,7 @@ class Settings(BaseSettings):
 
     # supabase
     supabase_url: str
-    supabase_key: str
+    supabase_secret_key: str
 
     # upstash redis
     upstash_redis_rest_url: str
