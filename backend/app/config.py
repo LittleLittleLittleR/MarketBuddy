@@ -12,6 +12,14 @@ class Settings(BaseSettings):
     # fastapi stuff
     allowed_origins: list[str] = ["http://localhost:3000"]
 
+    # supabase
+    supabase_url: str
+    supabase_key: str
+
+    # upstash redis
+    upstash_redis_rest_url: str
+    upstash_redis_rest_token: str
+
     # debug
     debug: bool = False
 
