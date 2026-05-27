@@ -1,13 +1,50 @@
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from app.config import settings
-from app.routers import analysis
 
 app = FastAPI()
-app.add_middleware(CORSMiddleware, allow_origins=settings.allowed_origins)
-app.include_router(analysis.router)
-
 
 @app.get("/")
 def read_root():
     return {"root": "welcome to MarketBuddy"}
+
+# AUTH
+@app.post("/signup/")
+def signup():
+    # TODO
+    return None
+
+@app.post("/login/")
+def login():
+    # TODO
+    return None
+
+@app.post("/logout/")
+def logout():
+    # TODO
+    return None
+
+# STOCKS
+@app.get("/stocks")
+def get_all_stocks(limit: int = 10, offset: int = 0):
+    # TODO
+    return None
+
+@app.get("/stocks/{stock_id}")
+def get_stock(stock_id: int):
+    # TODO
+    return None
+
+# WATCHLIST
+@app.get("/watchlist/{user_id}")
+def get_watchlist(user_id: int):
+    # TODO
+    return None
+
+@app.post("/watchlist/{user_id}")
+def add_watchlist(user_id: int):
+    # TODO
+    return None
+
+@app.delete("/watchlist/{user_id}")
+def remove_watchlist(user_id: int):
+    # TODO
+    return None
