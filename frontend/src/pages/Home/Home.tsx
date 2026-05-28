@@ -51,7 +51,37 @@ const Home = () => {
     direction: null,
   })
 
+  const [newTicker, setNewTicker] = useState('')
+  const [isAdding, setIsAdding] = useState(false)
+
   const navigate = useNavigate()
+
+  const fetchWatchlist = async () => {
+    const watchlistData = await watchlistStockService.getMyWatchlistStocks()
+  
+    const stockList: WatchlistStockDisplay[] = []
+  
+    for (const stock of watchlistData) {
+      const stockData: StockResponse =
+        await stockService.getStockByID(stock.stock_ticker)
+  
+      stockList.push({
+        ticker: stockData.ticker,
+        company_name: stockData.company_name,
+        current_price: stockData.current_price,
+        change_percent:
+          stockData.current_price !== null &&
+          stockData.open_price !== null &&
+          stockData.open_price !== 0
+            ? ((stockData.current_price - stockData.open_price) /
+                stockData.open_price) *
+              100
+            : null,
+      })
+    }
+  
+    setWatchlist(stockList)
+  }
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -68,24 +98,39 @@ const Home = () => {
       const profile = await profileService.getMyProfile()
       setUsername(profile.username || '')
 
-      const watchlistData = await watchlistStockService.getMyWatchlistStocks()
-      let stockList: WatchlistStockDisplay[] = []
-      for (const stock of watchlistData) {
-        const stockData: StockResponse = await stockService.getStockByID(stock.stock_ticker)
-        stockList.push({
-          ticker: stockData.ticker,
-          company_name: stockData.company_name,
-          current_price: stockData.current_price,
-          change_percent: (stockData.current_price !== null && stockData.open_price !== null && stockData.open_price !== 0)
-            ? ((stockData.current_price - stockData.open_price) / stockData.open_price) * 100
-            : null,
-        })
-      }
-      setWatchlist(stockList)
+      await fetchWatchlist()
     }
 
     fetchUser()
   }, [navigate])
+
+  const handleAddStock = async () => {
+    try {
+      if (!newTicker.trim()) {
+        return
+      }
+  
+      setIsAdding(true)
+  
+      // check if stock exists
+      const stock = await stockService.getStockByID(
+        newTicker.toUpperCase()
+      )
+  
+      await watchlistStockService.createWatchlistStock({
+        stock_ticker: stock.ticker,
+      })
+  
+      // refresh watchlist
+      await fetchWatchlist()
+      setNewTicker('')
+
+    } catch (error) {
+      console.error('Failed to add stock:', error)
+    } finally {
+      setIsAdding(false)
+    }
+  }
 
   const handleSort = (key: SortKey) => {
     setSortConfig((prev) => {
@@ -199,6 +244,23 @@ const Home = () => {
         </div>
 
         <Separator className="mb-6" />
+
+        <div className="mb-6 flex gap-2">
+          <input
+            type="text"
+            placeholder="Enter ticker (e.g. AAPL)"
+            value={newTicker}
+            onChange={(e) => setNewTicker(e.target.value.toUpperCase())}
+            className="border rounded-md px-3 py-2 w-64"
+          />
+
+          <Button
+            onClick={handleAddStock}
+            disabled={isAdding}
+          >
+            {isAdding ? 'Adding...' : 'Add Stock'}
+          </Button>
+        </div>
 
         <Card>
           <CardContent className="p-0">

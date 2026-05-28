@@ -15,12 +15,17 @@ const UserIDAuth = async () => {
 
 
 const StockIDAuth = async (stockId: string) => {
+  console.log('Checking stock:', stockId);
+
   const { data: stock, error } = await supabase
     .from('stocks')
-    .select('id')
+    .select('ticker')
     .eq('ticker', stockId)
     .single();
-  
+
+  console.log('Stock result:', stock);
+  console.log('Stock error:', error);
+
   if (error || !stock) {
     throw new Error('Stock not found');
   }
