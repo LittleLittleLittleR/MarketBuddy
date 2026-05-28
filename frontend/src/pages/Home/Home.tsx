@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
-import { signOut } from "@/lib/supabase";
-import { profileService } from "@/db/profile";
+import { signOut } from '@/lib/supabase'
+import { profileService } from '@/db/profile'
 
 import {
   Table,
@@ -37,11 +37,22 @@ type WatchlistStock = {
   change_percent: number
 }
 
+type SortKey = keyof WatchlistStock
+
+type SortConfig = {
+  key: SortKey | null
+  direction: 'asc' | 'desc' | null
+}
+
 const Home = () => {
 
   const [userEmail, setUserEmail] = useState('')
   const [username, setUsername] = useState('')
   const [watchlist, setWatchlist] = useState<WatchlistStock[]>([])
+  const [sortConfig, setSortConfig] = useState<SortConfig>({
+    key: null,
+    direction: null,
+  })
 
   const navigate = useNavigate()
 
@@ -85,6 +96,70 @@ const Home = () => {
 
     fetchUser()
   }, [navigate])
+
+  const handleSort = (key: SortKey) => {
+    setSortConfig((prev) => {
+      // if new column selected then default to ascending
+      if (prev.key !== key) {
+        return {
+          key,
+          direction: 'asc',
+        }
+      }
+
+      // if same column selected then toggle direction
+      if (prev.direction === 'asc') {
+        return {
+          key,
+          direction: 'desc',
+        }
+      }
+      if (prev.direction === 'desc') {
+        return {
+          key: null,
+          direction: null,
+        }
+      }
+      if (prev.direction === null) {
+        return {
+          key,
+          direction: 'asc',
+        }
+      }
+    })
+  }
+
+  const sortedWatchlist = useMemo(() => {
+    if (!sortConfig.key || !sortConfig.direction) {
+      return watchlist
+    }
+
+    const sorted = [...watchlist].sort((a, b) => {
+      const aValue = a[sortConfig.key!]
+      const bValue = b[sortConfig.key!]
+
+      if (typeof aValue === 'number' && typeof bValue === 'number') {
+        return sortConfig.direction === 'asc'
+          ? aValue - bValue
+          : bValue - aValue
+      }
+
+      return sortConfig.direction === 'asc'
+        ? String(aValue).localeCompare(String(bValue))
+        : String(bValue).localeCompare(String(aValue))
+    })
+
+    return sorted
+  }, [watchlist, sortConfig])
+
+  const getSortIndicator = (key: SortKey) => {
+    if (sortConfig.key !== key) return '↕'
+
+    if (sortConfig.direction === 'asc') return '↑'
+    if (sortConfig.direction === 'desc') return '↓'
+
+    return '↕'
+  }
 
   return (
     <div>
@@ -142,33 +217,80 @@ const Home = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Ticker</TableHead>
-                  <TableHead>Company</TableHead>
-                  <TableHead>Price</TableHead>
-                  <TableHead>Change</TableHead>
+                  <TableHead className="w-1/4 text-center">
+                    <Button
+                      variant="ghost"
+                      onClick={() => handleSort('ticker')}
+                    >
+                      <span>Ticker</span>
+
+                      <span className="ml-2 inline-block w-4 text-center">
+                        {getSortIndicator('ticker')}
+                      </span>
+                    </Button>
+                  </TableHead>
+
+                  <TableHead className="w-1/4 text-center">
+                    <Button
+                      variant="ghost"
+                      onClick={() => handleSort('company_name')}
+                    >
+                      <span>Company</span>
+
+                      <span className="ml-2 inline-block w-4 text-center">
+                        {getSortIndicator('company_name')}
+                      </span>
+                    </Button>
+                  </TableHead>
+
+                  <TableHead className="w-1/4 text-center">
+                    <Button
+                      variant="ghost"
+                      onClick={() => handleSort('current_price')}
+                    >
+                      <span>Price</span>
+
+                      <span className="ml-2 inline-block w-4 text-center">
+                        {getSortIndicator('current_price')}
+                      </span>
+                    </Button>
+                  </TableHead>
+
+                  <TableHead className="w-1/4 text-center">
+                    <Button
+                      variant="ghost"
+                      onClick={() => handleSort('change_percent')}
+                    >
+                      <span>Change</span>
+
+                      <span className="ml-2 inline-block w-4 text-center">
+                        {getSortIndicator('change_percent')}
+                      </span>
+                    </Button>
+                  </TableHead>
                 </TableRow>
               </TableHeader>
 
               <TableBody>
-                {watchlist.map((stock) => (
+                {sortedWatchlist.map((stock) => (
                   <TableRow key={stock.ticker}>
-                    <TableCell className="font-medium">
+                    <TableCell className="font-medium text-center">
                       {stock.ticker}
                     </TableCell>
 
-                    <TableCell>
+                    <TableCell className="text-center">
                       {stock.company_name}
                     </TableCell>
 
-                    <TableCell>
+                    <TableCell className="text-center">
                       ${stock.current_price.toFixed(2)}
                     </TableCell>
 
                     <TableCell
                       className={
                         stock.change_percent >= 0
-                          ? 'text-green-500'
-                          : 'text-red-500'
+                          ? 'text-green-500 text-center'
+                          : 'text-red-500 text-center'
                       }
                     >
                       {stock.change_percent >= 0 ? '+' : ''}
@@ -183,7 +305,7 @@ const Home = () => {
       </section>
 
     </div>
-  );
-};
+  )
+}
 
 export default Home;
