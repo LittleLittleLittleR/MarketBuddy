@@ -24,4 +24,4 @@ class StockReport(BaseModel):
 
 
 class StocksRequest(BaseModel):
-    body: List[str]
+    tickers: List[str]
