@@ -47,7 +47,7 @@ async def analyse_stocks(
         return await service.scrape_and_summarise(ticker, context)
 
     results = await asyncio.gather(
-        *[analyse_one(t) for t in stocks.body], return_exceptions=True
+        *[analyse_one(t) for t in stocks.tickers], return_exceptions=True
     )
 
     response = []
