@@ -10,8 +10,9 @@ LOCK_TTL_SECONDS = 30
 
 
 class TickerScraperService:
-    def __init__(self, redis_client: Redis):
+    def __init__(self, redis_client: Redis, max_sub_batch_size: int = 40):
         self.redis_client = redis_client
+        self.max_sub_batch_size = max_sub_batch_size
 
     async def scrape_and_cache_batch(
         self, tickers: list[str], is_clock_sweep: bool = False
@@ -41,6 +42,27 @@ class TickerScraperService:
                 return  # Everything already being handled
             tickers = tickers_to_scrape
 
+        # seperate into batch calls
+        sub_batches = [
+            tickers[i : i + self.max_sub_batch_size]
+            for i in range(0, len(tickers), self.max_sub_batch_size)
+        ]
+
+        # concurrently call scraper for each chunk
+        await asyncio.gather(*[self._scrape_chunk(chunk) for chunk in sub_batches])
+
+        # release locks after all chunks finish processing
+        if not is_clock_sweep:
+            lock_keys = [f"lock:scraping:{t}" for t in tickers]
+            if lock_keys:
+                await asyncio.gather(*[self.redis_client.delete(k) for k in lock_keys])
+
+        if not is_clock_sweep:
+            # release locks for tickers we successfully processed
+            for ticker in tickers:
+                await self.redis_client.delete(f"lock:scraping:{ticker}")
+
+    async def _scrape_chunk(self, tickers: list[str]):
         ticker_string = " ".join(tickers)
         payload = {}
 
@@ -71,11 +93,9 @@ class TickerScraperService:
                         close_series = data["Close"].dropna()
                         open_series = data["Open"].dropna()
 
-                    # 3. Validation Safety: Check if yfinance actually returned any rows
                     if close_series.empty or open_series.empty:
                         raise ValueError(f"No price history found for {ticker}")
 
-                    # 4. Extract the exact numbers securely
                     current_price = close_series.iloc[-1]
                     opening_price = open_series.iloc[0]
 
@@ -117,12 +137,4 @@ class TickerScraperService:
                 "[TICKER_SCRAPER_SERVICE:scrape_and_cache_batch]: Payload received: ",
                 payload,
             )
-            flattened_args = []
-            for ticker, data_json in payload.items():
-                flattened_args.extend([ticker, data_json])
             await self.redis_client.hmset("stock:prices", payload)
-
-        if not is_clock_sweep:
-            # release locks for tickers we successfully processed
-            for ticker in tickers:
-                await self.redis_client.delete(f"lock:scraping:{ticker}")

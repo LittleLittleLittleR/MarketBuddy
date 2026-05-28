@@ -29,6 +29,7 @@ async def get_live_ticker_prices(
 
     response_payload = {}
     tickers_to_scrape = []
+    pending_hash_updates = {}
 
     for ticker, raw_val in zip(req_tickers, cached_prices):
 
@@ -52,21 +53,27 @@ async def get_live_ticker_prices(
         else:
             tickers_to_scrape.append(ticker)
 
-            await redis_client.sadd("portfolio:tickers", ticker)
-
             pending_state = {
                 "price": None,
                 "opening_price": None,
                 "status": "PENDING",
                 "updated_at": None,
             }
-            await redis_client.hset("stock:prices", ticker, json.dumps(pending_state))
+            pending_hash_updates[ticker] = json.dumps(pending_state)
             response_payload[ticker] = pending_state
 
     # now check if any tickers we need to scrape and spin up adhoc background worker to scrape
     if tickers_to_scrape:
         scraper = TickerScraperService(redis_client=redis_client)
+
         print("[/TICKERS] Received tickers to scrape: ", tickers_to_scrape)
+
+        # batch update all the new tickers we see
+        await redis_client.sadd("portfolio:tickers", *tickers_to_scrape)
+
+        # batch update the pending tickers that are going to be rescraped
+        await redis_client.hmset("stock:prices", pending_hash_updates)
+
         print("Spinning up background_tasks")
         background_tasks.add_task(
             scraper.scrape_and_cache_batch,
