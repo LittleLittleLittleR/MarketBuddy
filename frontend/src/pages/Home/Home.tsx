@@ -109,6 +109,10 @@ const Home = () => {
       if (!newTicker.trim()) {
         return
       }
+      
+      if (watchlist.length >= 3) {
+        return
+      }
   
       setIsAdding(true)
   
@@ -129,6 +133,24 @@ const Home = () => {
       console.error('Failed to add stock:', error)
     } finally {
       setIsAdding(false)
+    }
+  }
+
+  const handleDeleteStock = async (ticker: string) => {
+    try {
+      const watchlistData = await watchlistStockService.getMyWatchlistStocks()
+  
+      const item = watchlistData.find(
+        (s) => s.stock_ticker === ticker
+      )
+  
+      if (!item) return
+  
+      await watchlistStockService.deleteWatchlistStock(item.id)
+      await fetchWatchlist()
+
+    } catch (error) {
+      console.error('Failed to delete stock:', error)
     }
   }
 
@@ -319,6 +341,9 @@ const Home = () => {
                     </Button>
                   </TableHead>
                 </TableRow>
+                <TableHead className="w-12 text-center">
+                  {/* empty header for delete button */}
+                </TableHead>
               </TableHeader>
 
               <TableBody>
@@ -345,6 +370,23 @@ const Home = () => {
                     >
                       {stock.change_percent !== null && stock.change_percent >= 0 ? '+' : ''}
                       {stock.change_percent !== null ? stock.change_percent.toFixed(2) : 'N/A'}%
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0">
+                            ⋮
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => handleDeleteStock(stock.ticker)}
+                            className="text-red-500"
+                          >
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))}
