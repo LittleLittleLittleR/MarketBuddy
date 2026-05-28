@@ -28,53 +28,59 @@ class StockAnalysisService:
         )
 
     async def fetch_news_links(self, ticker: str) -> List[NewsArticle]:
-        try:
-            restricted_query = f"{ticker}+stock+news"
+        max_retries = 3
+        for i in range(max_retries):
+            try:
+                restricted_query = f"{ticker}+stock+news"
 
-            # tbm=nws: news tab
-            # tbs=qdr:d: Past 24 hours
-            search_url = (
-                f"https://www.google.com/search?q={restricted_query}&tbm=nws&tbs=qdr:d"
-            )
+                # tbm=nws: news tab
+                # tbs=qdr:d: Past 24 hours
+                search_url = f"https://www.google.com/search?q={restricted_query}&tbm=nws&tbs=qdr:d"
 
-            data = {
-                "url": search_url,
-                "format": "raw",
-                "zone": settings.BRIGHTDATA_SERP_ZONE,
-            }
+                data = {
+                    "url": search_url,
+                    "format": "raw",
+                    "zone": settings.BRIGHTDATA_SERP_ZONE,
+                }
 
-            async with httpx.AsyncClient(timeout=15) as client:
-                response = await client.post(
-                    "https://api.brightdata.com/request", json=data, headers=headers
+                async with httpx.AsyncClient(timeout=15) as client:
+                    response = await client.post(
+                        "https://api.brightdata.com/request", json=data, headers=headers
+                    )
+
+                res_json = response.json()
+                news_results = res_json.get("news", [])
+
+                # fallback if got nothing
+                if not news_results:
+                    news_results = res_json.get("organic", [])
+
+                # check if got result again, if dh then return empty list
+                if not news_results:
+                    print(f"No news found for {ticker}")
+                    return []
+
+                articles = []
+                for item in news_results:
+                    article = NewsArticle(
+                        title=item.get("title", "Untitled"),
+                        url=item.get("link", ""),
+                        snippet=item.get("description", item.get("snippet", "")),
+                    )
+
+                    if article.url:
+                        articles.append(article)
+
+                print(f"Successfully fetched {len(articles)} links for {ticker}")
+                return articles
+            except Exception as e:
+                # raise RuntimeError(f"Failed to fetch news for {ticker}: {e}") from e
+                print(
+                    f"Error occured while fetching news for {ticker}: {e}\n\nRetrying...(Attempt {i+1}/3)"
                 )
 
-            res_json = response.json()
-            news_results = res_json.get("news", [])
-
-            # fallback if got nothing
-            if not news_results:
-                news_results = res_json.get("organic", [])
-
-            # check if got result again, if dh then return empty list
-            if not news_results:
-                print(f"No news found for {ticker}")
-                return []
-
-            articles = []
-            for item in news_results:
-                article = NewsArticle(
-                    title=item.get("title", "Untitled"),
-                    url=item.get("link", ""),
-                    snippet=item.get("description", item.get("snippet", "")),
-                )
-
-                if article.url:
-                    articles.append(article)
-
-            print(f"Successfully fetched {len(articles)} links for {ticker}")
-            return articles
-        except Exception as e:
-            raise RuntimeError(f"Failed to fetch news for {ticker}: {e}") from e
+        print("[STOCK_ANALYSIS:FETCH_NEWS_LINKs] Unable to fetch news for {ticker}")
+        return []
 
     async def scrape_and_summarise(self, ticker: str, context: str):
         prompt = f"You are a professional stock analysis that does deep research into stock movement and news of {ticker}. With all news snippets about the following stock Information. Return '[text]'. Tell me everything that happened based on the context. Always ensure that the data is verified before returning the result. Give me ALL the key points within the summary"
