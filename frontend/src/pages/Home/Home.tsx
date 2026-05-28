@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { signOut } from '@/lib/supabase'
+
 import { profileService } from '@/db/profile'
 import { watchlistStockService } from '@/db/watchlist_stock'
+import { stockService } from '@/db/stock'
 
 import type { StockResponse, WatchlistStockDisplay } from '@/types/stock'
 
@@ -69,12 +71,14 @@ const Home = () => {
       const watchlistData = await watchlistStockService.getMyWatchlistStocks()
       let stockList: WatchlistStockDisplay[] = []
       for (const stock of watchlistData) {
-        const stockData: StockResponse = await watchlistStockService.getStockPrice(stock.ticker)
+        const stockData: StockResponse = await stockService.getStockByID(stock.stock_ticker)
         stockList.push({
           ticker: stockData.ticker,
           company_name: stockData.company_name,
           current_price: stockData.current_price,
-          change_percent: ((stockData.current_price - stockData.open_price) / stockData.open_price) * 100,
+          change_percent: (stockData.current_price !== null && stockData.open_price !== null && stockData.open_price !== 0)
+            ? ((stockData.current_price - stockData.open_price) / stockData.open_price) * 100
+            : null,
         })
       }
       setWatchlist(stockList)
@@ -267,18 +271,18 @@ const Home = () => {
                     </TableCell>
 
                     <TableCell className="text-center">
-                      ${stock.current_price.toFixed(2)}
+                      ${stock.current_price?.toFixed(2)}
                     </TableCell>
 
                     <TableCell
                       className={
-                        stock.change_percent >= 0
+                        stock.change_percent !== null && stock.change_percent >= 0
                           ? 'text-green-500 text-center'
                           : 'text-red-500 text-center'
                       }
                     >
-                      {stock.change_percent >= 0 ? '+' : ''}
-                      {stock.change_percent.toFixed(2)}%
+                      {stock.change_percent !== null && stock.change_percent >= 0 ? '+' : ''}
+                      {stock.change_percent !== null ? stock.change_percent.toFixed(2) : 'N/A'}%
                     </TableCell>
                   </TableRow>
                 ))}

@@ -90,6 +90,7 @@ const TradeIDAuth = async (tradeId: number) => {
 
 export const dbAuth = {
   checkUserAuth: UserIDAuth,
+  checkStockAuth: StockIDAuth,
   checkPortfolioAuth: PortfolioIDAuth,
   checkTradeAuth: TradeIDAuth,
   checkWatchlistStockAuth: WatchlistStockIDAuth,

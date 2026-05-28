@@ -87,28 +87,28 @@ export type Database = {
       }
       stocks: {
         Row: {
-          company_name: string | null
-          currency: string | null
-          current_price: number | null
-          last_fetched_at: string | null
-          prev_close: number | null
           ticker: string
+          company_name: string
+          current_price: number | null
+          open_price: number | null
+          currency: string | null
+          updated_at: string | null
         }
         Insert: {
-          company_name?: string | null
-          currency?: string | null
-          current_price?: number | null
-          last_fetched_at?: string | null
-          prev_close?: number | null
           ticker: string
+          company_name: string
+          current_price?: number | null
+          open_price?: number | null
+          currency?: string | null
+          updated_at?: string | null
         }
         Update: {
-          company_name?: string | null
-          currency?: string | null
+          ticker: string
+          company_name?: string
           current_price?: number | null
-          last_fetched_at?: string | null
-          prev_close?: number | null
-          ticker?: string
+          open_price?: number | null
+          currency?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }

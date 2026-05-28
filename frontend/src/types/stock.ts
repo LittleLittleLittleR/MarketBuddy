@@ -2,15 +2,15 @@
 export interface StockResponse {
   ticker: string;
   company_name: string;
-  current_price: number;
-  open_price: number;
-  currency: string;
-  updated_at: string;
+  current_price: number | null;
+  open_price: number | null;
+  currency: string | null;
+  updated_at: string | null;
 }
 
 export interface WatchlistStockDisplay {
   ticker: string;
   company_name: string;
-  current_price: number;
-  change_percent: number;
+  current_price: number | null;
+  change_percent: number | null;
 }
