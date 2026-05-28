@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+
 import { supabase } from '@/lib/supabase'
 import { signOut } from '@/lib/supabase'
 
 import { profileService } from '@/db/profile'
-import { watchlistStockService } from '@/db/watchlist_stock'
-import { stockService } from '@/db/stock'
 
-import type { StockResponse, WatchlistStockDisplay } from '@/types/stock'
+import { watchlistStockHooks } from '@/hooks/watchlist_stock'
+
+import type { WatchlistStockDisplay } from '@/types/stock'
 
 import {
   Table,
@@ -56,33 +57,6 @@ const Home = () => {
 
   const navigate = useNavigate()
 
-  const fetchWatchlist = async () => {
-    const watchlistData = await watchlistStockService.getMyWatchlistStocks()
-  
-    const stockList: WatchlistStockDisplay[] = []
-  
-    for (const stock of watchlistData) {
-      const stockData: StockResponse =
-        await stockService.getStockByID(stock.stock_ticker)
-  
-      stockList.push({
-        ticker: stockData.ticker,
-        company_name: stockData.company_name,
-        current_price: stockData.current_price,
-        change_percent:
-          stockData.current_price !== null &&
-          stockData.open_price !== null &&
-          stockData.open_price !== 0
-            ? ((stockData.current_price - stockData.open_price) /
-                stockData.open_price) *
-              100
-            : null,
-      })
-    }
-  
-    setWatchlist(stockList)
-  }
-
   useEffect(() => {
     const fetchUser = async () => {
       const {
@@ -98,7 +72,8 @@ const Home = () => {
       const profile = await profileService.getMyProfile()
       setUsername(profile.username || '')
 
-      await fetchWatchlist()
+      const watchlistData = await watchlistStockHooks.fetchWatchlist()
+      setWatchlist(watchlistData)
     }
 
     fetchUser()
@@ -106,27 +81,16 @@ const Home = () => {
 
   const handleAddStock = async () => {
     try {
-      if (!newTicker.trim()) {
+      if (watchlist.length === 3) {
         return
       }
-      
-      if (watchlist.length >= 3) {
-        return
-      }
-  
+
       setIsAdding(true)
-  
-      // check if stock exists
-      const stock = await stockService.getStockByID(
-        newTicker.toUpperCase()
-      )
-  
-      await watchlistStockService.createWatchlistStock({
-        stock_ticker: stock.ticker,
-      })
-  
-      // refresh watchlist
-      await fetchWatchlist()
+      await watchlistStockHooks.addStock(newTicker)
+
+      const watchlistData = await watchlistStockHooks.fetchWatchlist()
+      setWatchlist(watchlistData)
+
       setNewTicker('')
 
     } catch (error) {
@@ -138,21 +102,15 @@ const Home = () => {
 
   const handleDeleteStock = async (ticker: string) => {
     try {
-      const watchlistData = await watchlistStockService.getMyWatchlistStocks()
-  
-      const item = watchlistData.find(
-        (s) => s.stock_ticker === ticker
-      )
-  
-      if (!item) return
-  
-      await watchlistStockService.deleteWatchlistStock(item.id)
-      await fetchWatchlist()
+      await watchlistStockHooks.deleteStock(ticker)
+      const watchlistData = await watchlistStockHooks.fetchWatchlist()
+      setWatchlist(watchlistData)
 
     } catch (error) {
       console.error('Failed to delete stock:', error)
     }
   }
+
 
   const handleSort = (key: SortKey) => {
     setSortConfig((prev) => {
