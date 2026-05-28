@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { signOut } from '@/lib/supabase'
 import { profileService } from '@/db/profile'
+import { watchlistStockService } from '@/db/watchlist_stock'
+
+import type { StockResponse, WatchlistStockDisplay } from '@/types/stock'
 
 import {
   Table,
@@ -29,15 +32,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 
-// dummy data type
-type WatchlistStock = {
-  ticker: string
-  company_name: string
-  current_price: number
-  change_percent: number
-}
-
-type SortKey = keyof WatchlistStock
+type SortKey = keyof WatchlistStockDisplay
 
 type SortConfig = {
   key: SortKey | null
@@ -48,7 +43,7 @@ const Home = () => {
 
   const [userEmail, setUserEmail] = useState('')
   const [username, setUsername] = useState('')
-  const [watchlist, setWatchlist] = useState<WatchlistStock[]>([])
+  const [watchlist, setWatchlist] = useState<WatchlistStockDisplay[]>([])
   const [sortConfig, setSortConfig] = useState<SortConfig>({
     key: null,
     direction: null,
@@ -71,27 +66,18 @@ const Home = () => {
       const profile = await profileService.getMyProfile()
       setUsername(profile.username || '')
 
-      // dummy data for now
-      setWatchlist([
-        {
-          ticker: 'AAPL',
-          company_name: 'Apple Inc.',
-          current_price: 213.55,
-          change_percent: 1.24,
-        },
-        {
-          ticker: 'TSLA',
-          company_name: 'Tesla',
-          current_price: 177.12,
-          change_percent: -2.31,
-        },
-        {
-          ticker: 'NVDA',
-          company_name: 'NVIDIA',
-          current_price: 120.33,
-          change_percent: 4.12,
-        },
-      ])
+      const watchlistData = await watchlistStockService.getMyWatchlistStocks()
+      let stockList: WatchlistStockDisplay[] = []
+      for (const stock of watchlistData) {
+        const stockData: StockResponse = await watchlistStockService.getStockPrice(stock.ticker)
+        stockList.push({
+          ticker: stockData.ticker,
+          company_name: stockData.company_name,
+          current_price: stockData.current_price,
+          change_percent: ((stockData.current_price - stockData.open_price) / stockData.open_price) * 100,
+        })
+      }
+      setWatchlist(stockList)
     }
 
     fetchUser()
@@ -120,11 +106,9 @@ const Home = () => {
           direction: null,
         }
       }
-      if (prev.direction === null) {
-        return {
-          key,
-          direction: 'asc',
-        }
+      return {
+        key,
+        direction: 'asc',
       }
     })
   }
