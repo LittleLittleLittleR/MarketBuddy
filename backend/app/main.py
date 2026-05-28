@@ -56,7 +56,6 @@ async def on_the_dot_clock_scheduler():
                     all_tracked_tickers, is_clock_sweep=True
                 )
 
-            # 6. Release the clock sweep guard lock
             await redis_client.delete("lock:clock_sweep")
             print(
                 f"[{datetime.now(timezone.utc).strftime('%H:%M:%S')}] Global 1-minute sweep complete."
