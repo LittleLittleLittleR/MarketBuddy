@@ -42,7 +42,7 @@ async def analyse_stocks(
             )
         context = "\n".join([f"[{a.title}: {a.snippet}" for a in links])
 
-        if settings.debug:
+        if settings.DEBUG:
             print()
             print("Context: ")
             print(context)
