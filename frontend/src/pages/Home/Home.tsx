@@ -1,8 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+
 import { supabase } from '@/lib/supabase'
 import { signOut } from '@/lib/supabase'
+
 import { profileService } from '@/db/profile'
+
+import { watchlistStockHooks } from '@/hooks/watchlist_stock'
+
+import type { WatchlistStockDisplay } from '@/types/stock'
 
 import {
   Table,
@@ -29,15 +35,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 
-// dummy data type
-type WatchlistStock = {
-  ticker: string
-  company_name: string
-  current_price: number
-  change_percent: number
-}
-
-type SortKey = keyof WatchlistStock
+type SortKey = keyof WatchlistStockDisplay
 
 type SortConfig = {
   key: SortKey | null
@@ -48,11 +46,14 @@ const Home = () => {
 
   const [userEmail, setUserEmail] = useState('')
   const [username, setUsername] = useState('')
-  const [watchlist, setWatchlist] = useState<WatchlistStock[]>([])
+  const [watchlist, setWatchlist] = useState<WatchlistStockDisplay[]>([])
   const [sortConfig, setSortConfig] = useState<SortConfig>({
     key: null,
     direction: null,
   })
+
+  const [newTicker, setNewTicker] = useState('')
+  const [isAdding, setIsAdding] = useState(false)
 
   const navigate = useNavigate()
 
@@ -71,31 +72,45 @@ const Home = () => {
       const profile = await profileService.getMyProfile()
       setUsername(profile.username || '')
 
-      // dummy data for now
-      setWatchlist([
-        {
-          ticker: 'AAPL',
-          company_name: 'Apple Inc.',
-          current_price: 213.55,
-          change_percent: 1.24,
-        },
-        {
-          ticker: 'TSLA',
-          company_name: 'Tesla',
-          current_price: 177.12,
-          change_percent: -2.31,
-        },
-        {
-          ticker: 'NVDA',
-          company_name: 'NVIDIA',
-          current_price: 120.33,
-          change_percent: 4.12,
-        },
-      ])
+      const watchlistData = await watchlistStockHooks.fetchWatchlist()
+      setWatchlist(watchlistData)
     }
 
     fetchUser()
   }, [navigate])
+
+  const handleAddStock = async () => {
+    try {
+      if (watchlist.length === 3) {
+        return
+      }
+
+      setIsAdding(true)
+      await watchlistStockHooks.addStock(newTicker)
+
+      const watchlistData = await watchlistStockHooks.fetchWatchlist()
+      setWatchlist(watchlistData)
+
+      setNewTicker('')
+
+    } catch (error) {
+      console.error('Failed to add stock:', error)
+    } finally {
+      setIsAdding(false)
+    }
+  }
+
+  const handleDeleteStock = async (ticker: string) => {
+    try {
+      await watchlistStockHooks.deleteStock(ticker)
+      const watchlistData = await watchlistStockHooks.fetchWatchlist()
+      setWatchlist(watchlistData)
+
+    } catch (error) {
+      console.error('Failed to delete stock:', error)
+    }
+  }
+
 
   const handleSort = (key: SortKey) => {
     setSortConfig((prev) => {
@@ -120,11 +135,9 @@ const Home = () => {
           direction: null,
         }
       }
-      if (prev.direction === null) {
-        return {
-          key,
-          direction: 'asc',
-        }
+      return {
+        key,
+        direction: 'asc',
       }
     })
   }
@@ -212,6 +225,23 @@ const Home = () => {
 
         <Separator className="mb-6" />
 
+        <div className="mb-6 flex gap-2">
+          <input
+            type="text"
+            placeholder="Enter ticker (e.g. AAPL)"
+            value={newTicker}
+            onChange={(e) => setNewTicker(e.target.value.toUpperCase())}
+            className="border rounded-md px-3 py-2 w-64"
+          />
+
+          <Button
+            onClick={handleAddStock}
+            disabled={isAdding}
+          >
+            {isAdding ? 'Adding...' : 'Add Stock'}
+          </Button>
+        </div>
+
         <Card>
           <CardContent className="p-0">
             <Table>
@@ -269,6 +299,9 @@ const Home = () => {
                     </Button>
                   </TableHead>
                 </TableRow>
+                <TableHead className="w-12 text-center">
+                  {/* empty header for delete button */}
+                </TableHead>
               </TableHeader>
 
               <TableBody>
@@ -283,18 +316,35 @@ const Home = () => {
                     </TableCell>
 
                     <TableCell className="text-center">
-                      ${stock.current_price.toFixed(2)}
+                      ${stock.current_price?.toFixed(2)}
                     </TableCell>
 
                     <TableCell
                       className={
-                        stock.change_percent >= 0
+                        stock.change_percent !== null && stock.change_percent >= 0
                           ? 'text-green-500 text-center'
                           : 'text-red-500 text-center'
                       }
                     >
-                      {stock.change_percent >= 0 ? '+' : ''}
-                      {stock.change_percent.toFixed(2)}%
+                      {stock.change_percent !== null && stock.change_percent >= 0 ? '+' : ''}
+                      {stock.change_percent !== null ? stock.change_percent.toFixed(2) : 'N/A'}%
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0">
+                            ⋮
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => handleDeleteStock(stock.ticker)}
+                            className="text-red-500"
+                          >
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))}
