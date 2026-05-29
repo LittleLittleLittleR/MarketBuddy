@@ -5,11 +5,10 @@ import { watchlistStockService } from '@/db/watchlist_stock';
 import type { WatchlistStockDisplay } from '@/types/stock';
 
 interface Props {
-  watchlist: WatchlistStockDisplay[];
   setWatchlist: (watchlist: WatchlistStockDisplay[]) => void; 
 }
 
-const StockPriceUpdater = ({ watchlist, setWatchlist }: Props) => {
+const StockPriceUpdater = ({ setWatchlist }: Props) => {
   useEffect(() => {
     let intervalId: ReturnType<typeof setInterval> | undefined;
 
@@ -53,7 +52,7 @@ const StockPriceUpdater = ({ watchlist, setWatchlist }: Props) => {
       try {
         if (!isMarketOpen()) return;
 
-        const tickers = await watchlistStockService.getAllWatchlistStocks();
+        const tickers = (await watchlistStockService.getMyWatchlistStocks()).map(s => s.stock_ticker);
 
         if (!tickers.length) return;
 
@@ -63,20 +62,15 @@ const StockPriceUpdater = ({ watchlist, setWatchlist }: Props) => {
         const updatedStocks: WatchlistStockDisplay[] = [];
         for (const ticker of tickers) {
           const stock = stocklist[ticker];
-          console.log(`Updating ${ticker}: `, stock);
-          
-          // await stockService.updateStock(ticker, {
-          //   current_price: stock.price,
-          //   open_price: stock.opening_price,
-          //   updated_at: stock.updated_at,
-          //   ticker: ticker,
-          // });
+          const db_stock = await stockService.getStockByID(ticker);
 
           updatedStocks.push({
             ticker: ticker,
-            company_name: '',
+            company_name: db_stock?.company_name || '',
             current_price: stock.price,
-            change_percent: ((stock.current_price - stock.open_price) / stock.open_price) * 100,
+            change_percent: stock.opening_price !== 0
+              ? ((stock.price - stock.opening_price) / stock.opening_price) * 100
+              : null,
           });
         }
 
@@ -93,7 +87,7 @@ const StockPriceUpdater = ({ watchlist, setWatchlist }: Props) => {
     poll();
 
     // interval polling
-    intervalId = setInterval(poll, 60 * 1000);
+    intervalId = setInterval(poll, 60 * 100);
 
     return () => {
       if (intervalId) clearInterval(intervalId);
