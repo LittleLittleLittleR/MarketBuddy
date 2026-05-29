@@ -5,13 +5,104 @@ import asyncio
 from contextlib import asynccontextmanager
 
 from app.config import settings
+from app.dependencies import get_stock_service
+from app.dependencies.supabase_client import get_supabase
+from app.repositories.summary_repo import SummaryRepository
 from app.routers import analysis, tickers
+from app.services.stock_analysis import StockAnalysisService
 from app.services.ticker_worker import TickerScraperService
 from app.dependencies.redis_client import get_redis
+from app.utils.time_utils import get_time_to_6am
+
+redis_client = get_redis()
+
+
+async def daily_analysis_scheduler():
+
+    supabase_client = await get_supabase()
+    analysis_service = StockAnalysisService(
+        redis_client=redis_client,
+        summary_repository=SummaryRepository(supabase_client=supabase_client),
+    )
+    CHUNK_SIZE = 10
+
+    while True:
+        try:
+            time_to_sleep = get_time_to_6am()
+            print("[DAILY_SCHEDULER] Sleeping until next cycle...")
+            print(f"[DAILY_SCHEDULER] Time to sleep: {time_to_sleep}")
+            await asyncio.sleep(time_to_sleep)
+
+            print(
+                "[DAILY_SCHEDULER] Wake up triggered! Fetching tickers from 'portfolio:tickers'..."
+            )
+
+            # scan Redis for the list of all tickers
+            cursor = 0
+            all_tracked_tickers = []
+            while True:
+                cursor, raw_batch = await redis_client.sscan(
+                    "portfolio:tickers", cursor=cursor, count=1000
+                )
+                tickers_list = [
+                    t.decode("utf-8") if isinstance(t, bytes) else t for t in raw_batch
+                ]
+                all_tracked_tickers.extend(tickers_list)
+                if cursor == 0:
+                    break
+
+            if not all_tracked_tickers:
+                print(
+                    "[DAILY_SCHEDULER] No tickers tracked in 'portfolio:tickers'. Skipping."
+                )
+                continue
+
+            # chunking the array
+            chunks = [
+                all_tracked_tickers[i : i + CHUNK_SIZE]
+                for i in range(0, len(all_tracked_tickers), CHUNK_SIZE)
+            ]
+
+            print(
+                f"[DAILY_SCHEDULER] Processing {len(all_tracked_tickers)} tickers across {len(chunks)} chunks."
+            )
+
+            for index, chunk in enumerate(chunks):
+                print(
+                    f"[DAILY_SCHEDULER] Processing chunk {index + 1}/{len(chunks)}: {chunk}"
+                )
+
+                async def analyse_one(ticker: str):
+                    try:
+                        links = await analysis_service.fetch_news_links(ticker=ticker)
+                        if not links:
+                            return
+                        context = "\n".join(
+                            [f"[{a.title}: {a.snippet}]" for a in links]
+                        )
+                        return await analysis_service.scrape_and_summarise(
+                            ticker, context
+                        )
+                    except Exception as err:
+                        # TODO: Logging in the future + Retry
+                        print(f"[DAILY_SCHEDULER ERROR] Failed on {ticker}: {err}")
+
+                # fire the analysis concurrently
+                await asyncio.gather(
+                    *[analyse_one(t) for t in chunk], return_exceptions=True
+                )
+                await asyncio.sleep(2)  # prevent spam for api calls
+
+            print("[DAILY_SCHEDULER] Daily sweep finished completely.")
+
+        except Exception as e:
+            print(f"[DAILY_SCHEDULER_ERROR]: {e}")
+            await asyncio.sleep(10)
+        finally:
+            print("[DAILY_SCHEDULER]: Closing...")
 
 
 async def on_the_dot_clock_scheduler():
-    redis_client = get_redis()
     scraper = TickerScraperService(redis_client, max_sub_batch_size=40)
 
     while True:
@@ -68,13 +159,19 @@ async def on_the_dot_clock_scheduler():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    scheduler_task = asyncio.create_task(on_the_dot_clock_scheduler())
+    minute_scheduler_task = asyncio.create_task(on_the_dot_clock_scheduler())
+    daily_schedular_task = asyncio.create_task(daily_analysis_scheduler())
     yield
-    scheduler_task.cancel()
+    minute_scheduler_task.cancel()
+    daily_schedular_task.cancel()
     try:
-        await scheduler_task
+        await asyncio.gather(
+            minute_scheduler_task, daily_schedular_task, return_exceptions=True
+        )
     except asyncio.CancelledError:
-        print("[LIFESPAN] Background ticker scheduler successfully stopped.")
+        print("[LIFESPAN] CancelledError")
+
+    print("[LIFESPAN] ALL Background scheduler successfully stopped.")
 
 
 app = FastAPI(lifespan=lifespan)
