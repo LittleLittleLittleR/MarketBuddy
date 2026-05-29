@@ -34,6 +34,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
+import StockPriceUpdater from '@/hooks/price_tracking'
 
 type SortKey = keyof WatchlistStockDisplay
 
@@ -71,9 +72,6 @@ const Home = () => {
       setUserEmail(user.email || '')
       const profile = await profileService.getMyProfile()
       setUsername(profile.username || '')
-
-      const watchlistData = await watchlistStockHooks.fetchWatchlist()
-      setWatchlist(watchlistData)
     }
 
     fetchUser()
@@ -174,24 +172,25 @@ const Home = () => {
     return '↕'
   }
 
-  // refetch watchlist every minute to get latest prices
-  useEffect(() => {
-    const fetchLatestWatchlist = async () => {
-      const data = await watchlistStockHooks.fetchWatchlist();
+  // // refetch watchlist every minute to get latest prices
+  // useEffect(() => {
+  //   const fetchLatestWatchlist = async () => {
+  //     const data = await watchlistStockHooks.fetchWatchlist();
   
-      setWatchlist(data);
-      console.log('Watchlist updated:', data);
-    };
+  //     setWatchlist(data);
+  //     console.log('Watchlist updated:', data);
+  //   };
   
-    fetchLatestWatchlist();
+  //   fetchLatestWatchlist();
   
-    const interval = setInterval(fetchLatestWatchlist, 60 * 1000);
+  //   const interval = setInterval(fetchLatestWatchlist, 60 * 1000);
   
-    return () => clearInterval(interval);
-  }, []);
+  //   return () => clearInterval(interval);
+  // }, []);
 
   return (
     <div>
+      <StockPriceUpdater setWatchlist={setWatchlist} />
       {/* Navbar */}
       <header className="border-b">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
@@ -314,10 +313,10 @@ const Home = () => {
                       </span>
                     </Button>
                   </TableHead>
+                  <TableHead className="w-12 text-center">
+                    {/* empty header for delete button */}
+                  </TableHead>
                 </TableRow>
-                <TableHead className="w-12 text-center">
-                  {/* empty header for delete button */}
-                </TableHead>
               </TableHeader>
 
               <TableBody>

@@ -2,8 +2,14 @@ import { useEffect } from 'react';
 import { fetchTickerPrices } from '@/api/ticker';
 import { stockService } from '@/db/stock';
 import { watchlistStockService } from '@/db/watchlist_stock';
+import type { WatchlistStockDisplay } from '@/types/stock';
 
-export default function StockPriceUpdater() {
+interface Props {
+  watchlist: WatchlistStockDisplay[];
+  setWatchlist: (watchlist: WatchlistStockDisplay[]) => void; 
+}
+
+const StockPriceUpdater = ({ watchlist, setWatchlist }: Props) => {
   useEffect(() => {
     let intervalId: ReturnType<typeof setInterval> | undefined;
 
@@ -24,7 +30,7 @@ export default function StockPriceUpdater() {
     
       const hour = Number(get('hour'));
       const minute = Number(get('minute'));
-      
+
       const nyDate = new Date(
         now.toLocaleString('en-US', { timeZone: 'America/New_York' })
       );
@@ -52,17 +58,32 @@ export default function StockPriceUpdater() {
         if (!tickers.length) return;
 
         const data = await fetchTickerPrices(tickers);
+        const stocklist = data.prices;
 
-        for (const [ticker, values] of Object.entries(data) as Array<[
-          string,
-          { price: number; open_price: number }
-        ]>) {
-          await stockService.updateStock(ticker, {
-            current_price: values.price,
-            open_price: values.open_price,
-            ticker,
+        const updatedStocks: WatchlistStockDisplay[] = [];
+        for (const ticker of tickers) {
+          const stock = stocklist[ticker];
+          console.log(`Updating ${ticker}: `, stock);
+          
+          // await stockService.updateStock(ticker, {
+          //   current_price: stock.price,
+          //   open_price: stock.opening_price,
+          //   updated_at: stock.updated_at,
+          //   ticker: ticker,
+          // });
+
+          updatedStocks.push({
+            ticker: ticker,
+            company_name: '',
+            current_price: stock.price,
+            change_percent: ((stock.current_price - stock.open_price) / stock.open_price) * 100,
           });
         }
+
+        if (updatedStocks.length) {
+          setWatchlist(updatedStocks);
+        }
+
       } catch (err) {
         console.error('Polling error:', err);
       }
@@ -81,3 +102,5 @@ export default function StockPriceUpdater() {
 
   return null;
 }
+
+export default StockPriceUpdater;
