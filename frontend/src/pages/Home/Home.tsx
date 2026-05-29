@@ -174,6 +174,22 @@ const Home = () => {
     return '↕'
   }
 
+  // refetch watchlist every minute to get latest prices
+  useEffect(() => {
+    const fetchLatestWatchlist = async () => {
+      const data = await watchlistStockHooks.fetchWatchlist();
+  
+      setWatchlist(data);
+      console.log('Watchlist updated:', data);
+    };
+  
+    fetchLatestWatchlist();
+  
+    const interval = setInterval(fetchLatestWatchlist, 60 * 1000);
+  
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div>
       {/* Navbar */}
