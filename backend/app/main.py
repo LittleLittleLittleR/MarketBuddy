@@ -3,16 +3,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime, timezone
 import asyncio
 from contextlib import asynccontextmanager
+import zoneinfo
 
 from app.config import settings
-from app.dependencies import get_stock_service
 from app.dependencies.supabase_client import get_supabase
 from app.repositories.summary_repo import SummaryRepository
 from app.routers import analysis, tickers
 from app.services.stock_analysis import StockAnalysisService
 from app.services.ticker_worker import TickerScraperService
 from app.dependencies.redis_client import get_redis
-from app.utils.time_utils import get_time_to_6am
+from app.utils.time_utils import get_time_to_6am, is_market_open, sg_time_now
 
 redis_client = get_redis()
 
@@ -105,24 +105,32 @@ async def daily_analysis_scheduler():
 async def on_the_dot_clock_scheduler():
     scraper = TickerScraperService(redis_client, max_sub_batch_size=40)
 
+    print("[MINUTE_SCHEDULER]: Starting scheduler...")
     while True:
         try:
-            now = datetime.now(timezone.utc)
+            now = sg_time_now()
             seconds_until_next_minute = 60 - now.second - (now.microsecond / 1000000.0)
 
             # sleep til next cycle
             await asyncio.sleep(seconds_until_next_minute)
 
+            if not is_market_open():
+
+                print(
+                    f"[{sg_time_now().strftime('%H:%M:%S')}] Market not open. Skipping cycle."
+                )
+                continue
+
             # global clock lock to safeguard against overlapping loops
             clock_lock = await redis_client.set("lock:clock_sweep", "1", nx=True, ex=55)
             if not clock_lock:
                 print(
-                    f"[{datetime.now(timezone.utc).strftime('%H:%M:%S')}] Global sweep already running. Skipping cycle."
+                    f"[{sg_time_now().strftime('%H:%M:%S')}] Global sweep already running. Skipping cycle."
                 )
                 continue
 
             print(
-                f"[{datetime.now(timezone.utc).strftime('%H:%M:%S')}] Starting global 1-minute sweep..."
+                f"[{sg_time_now().strftime('%H:%M:%S')}] Starting global 1-minute sweep..."
             )
 
             # scan redis for portfolio:tickers to scrape
@@ -149,7 +157,7 @@ async def on_the_dot_clock_scheduler():
 
             await redis_client.delete("lock:clock_sweep")
             print(
-                f"[{datetime.now(timezone.utc).strftime('%H:%M:%S')}] Global 1-minute sweep complete."
+                f"[{sg_time_now().strftime('%H:%M:%S')}] Global 1-minute sweep complete."
             )
 
         except Exception as e:
