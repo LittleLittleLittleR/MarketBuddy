@@ -3,6 +3,7 @@ import traceback
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import InstanceOf
 from app.config import settings
+from app.dependencies.auth import get_current_user
 from app.services.stock_analysis import StockAnalysisService
 from app.dependencies import get_stock_service
 from app.schemas.scraping import StocksRequest
@@ -13,7 +14,9 @@ router = APIRouter(prefix="/api", tags=["analysis"])
 
 @router.post("/analyse-stocks")
 async def analyse_stocks(
-    stocks: StocksRequest, service: StockAnalysisService = Depends(get_stock_service)
+    stocks: StocksRequest,
+    service: StockAnalysisService = Depends(get_stock_service),
+    current_user=Depends(get_current_user),
 ):  # takes in a list containing stocks required to scrape and summarise
     print("Received: ", stocks)
 

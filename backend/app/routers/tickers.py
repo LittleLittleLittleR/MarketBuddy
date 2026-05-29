@@ -4,6 +4,7 @@ from upstash_redis.asyncio import Redis
 from app.dependencies.redis_client import get_redis
 from app.services.ticker_worker import TickerScraperService
 import json
+from app.dependencies.auth import get_current_user
 
 router = APIRouter(prefix="/api/tickers", tags=["tickers"])
 
@@ -13,6 +14,7 @@ async def get_live_ticker_prices(
     tickers: StocksRequest,
     background_tasks: BackgroundTasks,
     redis_client: Redis = Depends(get_redis),
+    current_user=Depends(get_current_user),
 ):
 
     # for this function i got two scenarios
