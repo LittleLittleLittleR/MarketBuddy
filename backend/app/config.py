@@ -1,30 +1,47 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import field_validator
 
 
 class Settings(BaseSettings):
     # brightdata stuff
-    brightdata_api_token: str
+    BRIGHTDATA_API_TOKEN: str
     BRIGHTDATA_SERP_ZONE: str = "serp_api1"
 
     # llms api key
-    openai_api_key: str
+    OPENAI_API_KEY: str
 
     # fastapi stuff
-    allowed_origins: list[str] = ["http://localhost:3000"]
+    ALLOWED_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:5173"]
 
     # supabase
-    supabase_url: str
-    supabase_secret_key: str
+    SUPABASE_URL: str
+    SUPABASE_SECRET_KEY: str
 
     # upstash redis
-    upstash_redis_rest_url: str
-    upstash_redis_rest_token: str
+    UPSTASH_REDIS_REST_URL: str
+    UPSTASH_REDIS_REST_TOKEN: str
 
     # debug
-    debug: bool = False
+    DEBUG: bool = False
 
-    class Config:
-        env_file = ".env"
+    # class Config:
+    #   env_file = ".env"
+    #
+
+    @field_validator("ALLOWED_ORIGINS", mode="before")
+    @classmethod
+    def parse_comma_separated_list(cls, v: any) -> list[str]:
+        if isinstance(v, list):
+            return v
+        if isinstance(v, str):
+            return [item.strip() for item in v.split(",") if item.strip()]
+        raise ValueError("Invalid format for ALLOWED_ORIGINS")
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
 
 settings = Settings()

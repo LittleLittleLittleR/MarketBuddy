@@ -3,4 +3,4 @@ from app.config import settings
 
 
 async def get_supabase() -> AsyncClient:
-    return await acreate_client(settings.supabase_url, settings.supabase_secret_key)
+    return await acreate_client(settings.SUPABASE_URL, settings.SUPABASE_SECRET_KEY)
