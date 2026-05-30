@@ -1,6 +1,5 @@
 import { supabase } from '@/lib/supabase';
 import type { TablesUpdate } from '@/types/supabase';
-import { dbAuth } from './auth/auth';
 
 const getSummaryByTicker = async (ticker: string) => {
   const { data, error } = await supabase

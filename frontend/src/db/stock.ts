@@ -1,7 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import type { TablesUpdate } from '@/types/supabase';
 import { dbAuth } from './auth/auth';
-import { watchlistStockService } from './watchlist_stock';
 
 const getStocks = async () => {
   const { data, error } = await supabase

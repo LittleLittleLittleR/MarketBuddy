@@ -1,5 +1,3 @@
-import { useEffect } from 'react';
-import { fetchTickerPrices } from '@/api/ticker';
 import { watchlistStockService } from '@/db/watchlist_stock';
 import { fetchTickerSummaries } from '@/api/summary';
 
