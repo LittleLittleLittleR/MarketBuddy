@@ -1,3 +1,5 @@
+import sys
+from loguru import logger
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime, timezone
@@ -12,6 +14,16 @@ from app.services.stock_analysis import StockAnalysisService
 from app.services.ticker_worker import TickerScraperService
 from app.dependencies.redis_client import get_redis
 from app.utils.time_utils import get_time_to_6am, is_market_open, sg_time_now
+
+logger.remove()
+
+# format for SGT
+logger.add(
+    sys.stdout,
+    format="<green>{time:YYYY-MM-DD HH:mm:ss.SSS ZZ}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
+    enqueue=True,
+)
+
 
 redis_client = get_redis()
 
@@ -28,11 +40,11 @@ async def daily_analysis_scheduler():
     while True:
         try:
             time_to_sleep = get_time_to_6am()
-            print("[DAILY_SCHEDULER] Sleeping until next cycle...")
-            print(f"[DAILY_SCHEDULER] Time to sleep: {time_to_sleep}")
+            logger.info("[DAILY_SCHEDULER] Sleeping until next cycle...")
+            logger.info(f"[DAILY_SCHEDULER] Time to sleep: {time_to_sleep}")
             await asyncio.sleep(time_to_sleep)
 
-            print(
+            logger.info(
                 "[DAILY_SCHEDULER] Wake up triggered! Fetching tickers from 'portfolio:tickers'..."
             )
 
@@ -51,7 +63,7 @@ async def daily_analysis_scheduler():
                     break
 
             if not all_tracked_tickers:
-                print(
+                logger.warning(
                     "[DAILY_SCHEDULER] No tickers tracked in 'portfolio:tickers'. Skipping."
                 )
                 continue
@@ -62,12 +74,12 @@ async def daily_analysis_scheduler():
                 for i in range(0, len(all_tracked_tickers), CHUNK_SIZE)
             ]
 
-            print(
+            logger.info(
                 f"[DAILY_SCHEDULER] Processing {len(all_tracked_tickers)} tickers across {len(chunks)} chunks."
             )
 
             for index, chunk in enumerate(chunks):
-                print(
+                logger.info(
                     f"[DAILY_SCHEDULER] Processing chunk {index + 1}/{len(chunks)}: {chunk}"
                 )
 
@@ -83,8 +95,9 @@ async def daily_analysis_scheduler():
                             ticker, context
                         )
                     except Exception as err:
-                        # TODO: Logging in the future + Retry
-                        print(f"[DAILY_SCHEDULER ERROR] Failed on {ticker}: {err}")
+                        logger.exception(
+                            f"[DAILY_SCHEDULER ERROR] Failed on {ticker}: {err}"
+                        )
 
                 # fire the analysis concurrently
                 await asyncio.gather(
@@ -92,19 +105,19 @@ async def daily_analysis_scheduler():
                 )
                 await asyncio.sleep(2)  # prevent spam for api calls
 
-            print("[DAILY_SCHEDULER] Daily sweep finished completely.")
+            logger.info("[DAILY_SCHEDULER] Daily sweep finished completely.")
 
         except Exception as e:
-            print(f"[DAILY_SCHEDULER_ERROR]: {e}")
+            logger.exception(f"[DAILY_SCHEDULER_ERROR]: {e}")
             await asyncio.sleep(10)
         finally:
-            print("[DAILY_SCHEDULER]: Closing...")
+            logger.info("[DAILY_SCHEDULER]: Closing...")
 
 
 async def on_the_dot_clock_scheduler():
     scraper = TickerScraperService(redis_client, max_sub_batch_size=40)
 
-    print("[MINUTE_SCHEDULER]: Starting scheduler...")
+    logger.info("[MINUTE_SCHEDULER]: Starting scheduler...")
     while True:
         try:
             now = sg_time_now()
@@ -115,22 +128,16 @@ async def on_the_dot_clock_scheduler():
 
             if not is_market_open():
 
-                print(
-                    f"[{sg_time_now().strftime('%H:%M:%S')}] Market not open. Skipping cycle."
-                )
+                logger.debug("Market not open. Skipping cycle.")
                 continue
 
             # global clock lock to safeguard against overlapping loops
             clock_lock = await redis_client.set("lock:clock_sweep", "1", nx=True, ex=55)
             if not clock_lock:
-                print(
-                    f"[{sg_time_now().strftime('%H:%M:%S')}] Global sweep already running. Skipping cycle."
-                )
+                logger.debug("Global sweep already running. Skipping cycle.")
                 continue
 
-            print(
-                f"[{sg_time_now().strftime('%H:%M:%S')}] Starting global 1-minute sweep..."
-            )
+            logger.info("Starting global 1-minute sweep...")
 
             # scan redis for portfolio:tickers to scrape
             cursor = 0
@@ -155,12 +162,10 @@ async def on_the_dot_clock_scheduler():
                 )
 
             await redis_client.delete("lock:clock_sweep")
-            print(
-                f"[{sg_time_now().strftime('%H:%M:%S')}] Global 1-minute sweep complete."
-            )
+            logger.info("Global 1-minute sweep complete.")
 
         except Exception as e:
-            print(f"[CLOCK_SCHEDULER_ERROR]: {e}")
+            logger.exception(f"[CLOCK_SCHEDULER_ERROR]: {e}")
             await asyncio.sleep(1)
 
 
@@ -168,6 +173,7 @@ async def on_the_dot_clock_scheduler():
 async def lifespan(app: FastAPI):
     minute_scheduler_task = asyncio.create_task(on_the_dot_clock_scheduler())
     daily_schedular_task = asyncio.create_task(daily_analysis_scheduler())
+    logger.success("[LIFESPAN] Background schedulers are active")
     yield
     minute_scheduler_task.cancel()
     daily_schedular_task.cancel()
@@ -176,9 +182,9 @@ async def lifespan(app: FastAPI):
             minute_scheduler_task, daily_schedular_task, return_exceptions=True
         )
     except asyncio.CancelledError:
-        print("[LIFESPAN] CancelledError")
+        logger.warning("[LIFESPAN] CancelledError")
 
-    print("[LIFESPAN] ALL Background scheduler successfully stopped.")
+    logger.success("[LIFESPAN] ALL Background scheduler successfully stopped.")
 
 
 app = FastAPI(lifespan=lifespan)
@@ -197,3 +203,4 @@ app.include_router(tickers.router)
 @app.get("/")
 def read_root():
     return {"root": "welcome to MarketBuddy"}
+

@@ -10,3 +10,4 @@ pydantic-settings
 upstash_redis
 yfinance
 PyJWT[crypto]>=2.8.0
+loguru

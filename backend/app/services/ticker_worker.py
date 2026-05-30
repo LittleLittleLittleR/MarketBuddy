@@ -5,6 +5,7 @@ import json
 import pandas as pd
 from datetime import datetime, timezone
 from upstash_redis.asyncio import Redis
+from loguru import logger
 
 LOCK_TTL_SECONDS = 30
 
@@ -35,6 +36,7 @@ class TickerScraperService:
                     lock_key, "1", nx=True, ex=LOCK_TTL_SECONDS
                 )
                 if acquired:
+                    logger.debug(f"Lock acquired for {ticker}")
                     tickers_to_scrape.append(ticker)
                 # if lock is not acquired, another task is already scraping this ticker so js skip
 
@@ -55,10 +57,12 @@ class TickerScraperService:
         if not is_clock_sweep:
             lock_keys = [f"lock:scraping:{t}" for t in tickers]
             if lock_keys:
+                logger.info("Deleting lock keys...")
                 await asyncio.gather(*[self.redis_client.delete(k) for k in lock_keys])
 
         if not is_clock_sweep:
             # release locks for tickers we successfully processed
+            logger.info("[IS_CLOCK_SWEEP] Deleting lock keys...")
             for ticker in tickers:
                 await self.redis_client.delete(f"lock:scraping:{ticker}")
 
@@ -108,7 +112,7 @@ class TickerScraperService:
                         }
                     )
                 except Exception as e:
-                    print(
+                    logger.exception(
                         f"[TICKER_SCRAPER_SERVICE:scrape_and_cache_batch] Data parsing error for {ticker}: {e}"
                     )
                     payload[ticker] = json.dumps(
@@ -120,7 +124,7 @@ class TickerScraperService:
                         }
                     )
         except Exception as e:
-            print(f"[TICKER_SCRAPER_SERVICE] Error for batch {tickers}: {e}")
+            logger.exception(f"[TICKER_SCRAPER_SERVICE] Error for batch {tickers}: {e}")
             for ticker in tickers:
                 payload[ticker] = json.dumps(
                     {
