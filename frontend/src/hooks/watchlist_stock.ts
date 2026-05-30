@@ -44,9 +44,6 @@ const addStock = async (newTicker: string) => {
       stock_ticker: stock.ticker,
     })
 
-    // refresh watchlist
-    await fetchWatchlist()
-
   } catch (error) {
     console.error('Failed to add stock:', error)
   }
@@ -64,7 +61,6 @@ const deleteStock = async (ticker: string) => {
     if (!item) return
 
     await watchlistStockService.deleteWatchlistStock(item.id)
-    await watchlistStockHooks.fetchWatchlist()
 
   } catch (error) {
     console.error('Failed to delete stock:', error)

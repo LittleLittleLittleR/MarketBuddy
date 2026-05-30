@@ -34,7 +34,8 @@ import {
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
-import StockPriceUpdater from '@/hooks/price_tracking'
+import LiveStockPriceUpdater from '@/hooks/price_tracking'
+import { fetchMyWatchlistPrices } from '@/hooks/price_fetching'
 import { stockSummaryUpdater } from '@/hooks/summary'
 
 type SortKey = keyof WatchlistStockDisplay
@@ -76,6 +77,9 @@ const Home = () => {
       setUserEmail(user.email || '')
       const profile = await profileService.getMyProfile()
       setUsername(profile.username || '')
+
+      const data = await fetchMyWatchlistPrices();
+      setWatchlist(data || [])
     }
 
     fetchUser()
@@ -89,7 +93,8 @@ const Home = () => {
 
       setIsAdding(true)
       await watchlistStockHooks.addStock(newTicker)
-      location.reload();
+      const data = await fetchMyWatchlistPrices();
+      setWatchlist(data || [])
 
       setNewTicker('')
 
@@ -103,7 +108,8 @@ const Home = () => {
   const handleDeleteStock = async (ticker: string) => {
     try {
       await watchlistStockHooks.deleteStock(ticker)
-      location.reload();
+      const data = await fetchMyWatchlistPrices();
+      setWatchlist(data || []);
 
     } catch (error) {
       console.error('Failed to delete stock:', error)
@@ -204,7 +210,7 @@ const Home = () => {
 
   return (
     <div>
-      <StockPriceUpdater setWatchlist={setWatchlist} />
+      <LiveStockPriceUpdater setWatchlist={setWatchlist} />
       {/* Navbar */}
       <header className="border-b">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
