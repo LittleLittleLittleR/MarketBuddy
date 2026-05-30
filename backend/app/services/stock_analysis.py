@@ -9,7 +9,7 @@ from app.config import settings
 from app.schemas.scraping import NewsArticle
 
 headers = {
-    "Authorization": f"Bearer {settings.brightdata_api_token}",
+    "Authorization": f"Bearer {settings.BRIGHTDATA_API_TOKEN}",
     "Content-Type": "application/json",
 }
 
@@ -20,8 +20,8 @@ class StockAnalysisService:
         redis_client: Redis,
         summary_repository: SummaryRepository,
     ):
-        self.bd_client = BrightDataClient(token=settings.brightdata_api_token)
-        self.ai_client = AsyncOpenAI(api_key=settings.openai_api_key)
+        self.bd_client = BrightDataClient(token=settings.BRIGHTDATA_API_TOKEN)
+        self.ai_client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
         self.redis_client = redis_client
         self.summary_repository = (
             summary_repository  # for data access on supabase summaries table

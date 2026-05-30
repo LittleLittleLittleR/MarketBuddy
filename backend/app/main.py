@@ -3,7 +3,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime, timezone
 import asyncio
 from contextlib import asynccontextmanager
-import zoneinfo
 
 from app.config import settings
 from app.dependencies.supabase_client import get_supabase
@@ -183,12 +182,13 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+print(settings.ALLOWED_ORIGINS)
 app.add_middleware(
-    CORSMiddleware, 
-    allow_origins=settings.allowed_origins, 
-    allow_methods=["*"], 
-    allow_headers=["*"], 
-    allow_credentials=True
+    CORSMiddleware,
+    allow_origins=settings.ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 app.include_router(analysis.router)
 app.include_router(tickers.router)

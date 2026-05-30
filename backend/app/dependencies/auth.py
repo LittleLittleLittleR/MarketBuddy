@@ -5,7 +5,7 @@ from app.config import settings
 
 security = HTTPBearer()
 
-SUPABASE_URL = settings.supabase_url
+SUPABASE_URL = settings.SUPABASE_URL
 JWKS_URL = f"{SUPABASE_URL}/auth/v1/.well-known/jwks.json"
 
 jwk_client = jwt.PyJWKClient(JWKS_URL)
