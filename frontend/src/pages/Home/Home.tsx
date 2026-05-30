@@ -34,6 +34,9 @@ import {
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
+import LiveStockPriceUpdater from '@/hooks/price_tracking'
+import { fetchMyWatchlistPrices } from '@/hooks/price_fetching'
+import { stockSummaryUpdater } from '@/hooks/summary'
 
 type SortKey = keyof WatchlistStockDisplay
 
@@ -55,6 +58,9 @@ const Home = () => {
   const [newTicker, setNewTicker] = useState('')
   const [isAdding, setIsAdding] = useState(false)
 
+  const [summarylist, setSummarylist] = useState<string[]>([])
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false)
+
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -72,8 +78,8 @@ const Home = () => {
       const profile = await profileService.getMyProfile()
       setUsername(profile.username || '')
 
-      const watchlistData = await watchlistStockHooks.fetchWatchlist()
-      setWatchlist(watchlistData)
+      const data = await fetchMyWatchlistPrices();
+      setWatchlist(data || [])
     }
 
     fetchUser()
@@ -87,9 +93,8 @@ const Home = () => {
 
       setIsAdding(true)
       await watchlistStockHooks.addStock(newTicker)
-
-      const watchlistData = await watchlistStockHooks.fetchWatchlist()
-      setWatchlist(watchlistData)
+      const data = await fetchMyWatchlistPrices();
+      setWatchlist(data || [])
 
       setNewTicker('')
 
@@ -103,8 +108,8 @@ const Home = () => {
   const handleDeleteStock = async (ticker: string) => {
     try {
       await watchlistStockHooks.deleteStock(ticker)
-      const watchlistData = await watchlistStockHooks.fetchWatchlist()
-      setWatchlist(watchlistData)
+      const data = await fetchMyWatchlistPrices();
+      setWatchlist(data || []);
 
     } catch (error) {
       console.error('Failed to delete stock:', error)
@@ -174,8 +179,38 @@ const Home = () => {
     return '↕'
   }
 
+  const fetchSummary = async () => {
+  try {
+    setIsGeneratingSummary(true)
+
+    await stockSummaryUpdater({ setSummarylist })
+
+  } catch (error) {
+    console.error('Failed to fetch summaries:', error)
+  } finally {
+    setIsGeneratingSummary(false)
+  }
+}
+
+  // // refetch watchlist every minute to get latest prices
+  // useEffect(() => {
+  //   const fetchLatestWatchlist = async () => {
+  //     const data = await watchlistStockHooks.fetchWatchlist();
+  
+  //     setWatchlist(data);
+  //     console.log('Watchlist updated:', data);
+  //   };
+  
+  //   fetchLatestWatchlist();
+  
+  //   const interval = setInterval(fetchLatestWatchlist, 60 * 1000);
+  
+  //   return () => clearInterval(interval);
+  // }, []);
+
   return (
     <div>
+      <LiveStockPriceUpdater setWatchlist={setWatchlist} />
       {/* Navbar */}
       <header className="border-b">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
@@ -298,10 +333,10 @@ const Home = () => {
                       </span>
                     </Button>
                   </TableHead>
+                  <TableHead className="w-12 text-center">
+                    {/* empty header for delete button */}
+                  </TableHead>
                 </TableRow>
-                <TableHead className="w-12 text-center">
-                  {/* empty header for delete button */}
-                </TableHead>
               </TableHeader>
 
               <TableBody>
@@ -352,6 +387,68 @@ const Home = () => {
             </Table>
           </CardContent>
         </Card>
+
+        {/* AI Stock Summaries */}
+        <div className="mt-8 whitespace-pre-line text-gray-300">
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight">
+                AI Market Summaries
+              </h2>
+
+              <p className="text-muted-foreground">
+                Generate AI-powered summaries for your watchlist
+              </p>
+            </div>
+
+            <Button
+              onClick={fetchSummary}
+              disabled={isGeneratingSummary || watchlist.length === 0}
+            >
+              {isGeneratingSummary
+                ? 'Generating...'
+                : 'Generate Summary'}
+            </Button>
+          </div>
+
+          {summarylist.length === 0 ? (
+            <Card>
+              <CardContent className="flex items-center justify-center py-10">
+                <p className="text-muted-foreground">
+                  No summaries generated yet.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {summarylist.map((summary, index) => (
+                <Card
+                  key={index}
+                  className="transition-shadow hover:shadow-md"
+                >
+                  <CardContent className="p-5">
+                    <div className="mb-3 flex items-center gap-2">
+                      <div className="h-2 w-2 rounded-full bg-green-500" />
+
+                      <span className="text-sm font-medium text-muted-foreground">
+                        Summary #{index + 1}
+                      </span>
+                    </div>
+
+                    <div
+                      className="prose prose-sm max-w-none dark:prose-invert"
+                      dangerouslySetInnerHTML={{
+                        __html: summary
+                          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                          .replace(/\n/g, '<br />')
+                      }}
+                    />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
       </section>
 
     </div>

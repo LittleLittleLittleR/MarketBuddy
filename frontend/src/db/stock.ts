@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import type { TablesUpdate } from '@/types/supabase';
 import { dbAuth } from './auth/auth';
+import { watchlistStockService } from './watchlist_stock';
 
 const getStocks = async () => {
   const { data, error } = await supabase
@@ -30,7 +31,27 @@ const getStockByID = async (ticker: string) => {
   return data;
 }
 
+const updateStock = async (
+  ticker: string,
+  updates: TablesUpdate<'stocks'>
+) => {
+  await dbAuth.checkStockAuth(ticker);
+
+  const { data, error } = await supabase
+    .from('stocks')
+    .update(updates)
+    .eq('ticker', ticker)
+    .select()
+    .single();
+  
+  if (error) {
+    throw error;
+  }
+  return data;
+};
+
 export const stockService = {
   getStocks,
   getStockByID,
+  updateStock,
 };

@@ -22,6 +22,20 @@ const getMyWatchlistStocks = async () => {
   return data;
 };
 
+const getAllWatchlistStocks = async () => {
+  const { data, error } = await supabase
+    .from('watchlist_stocks')
+    .select('stock_ticker', { count: 'exact' })
+    .order('stock_ticker', { ascending: true });
+
+  if (error) throw error;
+
+  // dedupe duplicates
+  const uniqueTickers = [...new Set(data.map((row) => row.stock_ticker))];
+
+  return uniqueTickers;
+};
+
 const createWatchlistStock = async (
   watchlistStock: Omit<TablesInsert<'watchlist_stocks'>, 'user_id'>
 ) => {
@@ -81,4 +95,5 @@ export const watchlistStockService = {
   createWatchlistStock,
   updateWatchlistStock,
   deleteWatchlistStock,
+  getAllWatchlistStocks,
 };
