@@ -4,7 +4,7 @@ export default function Landing() {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Navbar */}
-      <nav className="flex items-center justify-between py-6">
+      <nav className="flex items-center justify-center py-6">
         <h1 className="text-2xl font-bold">MarketBuddy</h1>
       </nav>
 
