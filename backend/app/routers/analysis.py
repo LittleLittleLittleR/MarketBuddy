@@ -8,6 +8,7 @@ from app.services.stock_analysis import StockAnalysisService
 from app.dependencies import get_stock_service
 from app.schemas.scraping import StocksRequest
 from time import perf_counter
+from loguru import logger
 
 router = APIRouter(prefix="/api", tags=["analysis"])
 
@@ -18,7 +19,9 @@ async def analyse_stocks(
     service: StockAnalysisService = Depends(get_stock_service),
     current_user=Depends(get_current_user),
 ):  # takes in a list containing stocks required to scrape and summarise
-    print("Received: ", stocks)
+    logger.success(
+        f"[ANALYSE-STOCKS] Received request from {current_user.get("email")}"
+    )
 
     start = perf_counter()
 
@@ -29,17 +32,18 @@ async def analyse_stocks(
         cache_key = f"stock:{ticker.upper()}:summary:daily"
         cached_record = await service.redis_client.get(cache_key)
         if cached_record:
-            print(f"Cached record for {ticker} found!")
+            logger.success(f"Cached record for {ticker} found!")
             return cached_record
         else:
-            print(f"No cached record found for {ticker}! Performing scraping now...")
+            logger.warning(
+                f"No cached record found for {ticker}! Performing scraping now..."
+            )
 
         links = await service.fetch_news_links(ticker=ticker)
         if not links:
-            print("HTTPException for: ", ticker)
-            raise HTTPException(
-                status_code=404, detail=f"No news found for ticker: {ticker}"
-            )
+            logger.warning("HTTPException for: ", ticker)
+            return f"No news for the last 24 hours for {ticker}"
+
         context = "\n".join([f"[{a.title}: {a.snippet}" for a in links])
 
         if settings.DEBUG:
@@ -59,9 +63,9 @@ async def analyse_stocks(
         if not isinstance(res, Exception):
             response.append(res)
         else:
-            print(f"Error type: {type(res).__name__}")
-            print(f"Error message: {str(res)}")
-            print(
+            logger.debug(f"Error type: {type(res).__name__}")
+            logger.debug(f"Error message: {str(res)}")
+            logger.debug(
                 f"Full traceback:\n{''.join(traceback.format_exception(type(res), res, res.__traceback__))}"
             )
 
@@ -69,7 +73,5 @@ async def analyse_stocks(
 
     # track performance for time taken
 
-    print("============================================")
-    print(f"Elapsed time: {end - start:.6f} seconds")
-    print("============================================")
+    logger.debug(f"Elapsed time: {end - start:.6f} seconds")
     return response

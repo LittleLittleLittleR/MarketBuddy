@@ -3,6 +3,7 @@ from typing import List
 from openai import AsyncOpenAI
 import httpx
 from upstash_redis.asyncio import Redis
+from loguru import logger
 
 from app.repositories.summary_repo import SummaryRepository
 from app.config import settings
@@ -30,6 +31,7 @@ class StockAnalysisService:
     async def fetch_news_links(self, ticker: str) -> List[NewsArticle]:
         max_retries = 3
         for i in range(max_retries):
+            logger.debug(f"Retries for {ticker}: {i+1}/3")
             try:
                 restricted_query = f"{ticker}+stock+news"
 
@@ -57,7 +59,7 @@ class StockAnalysisService:
 
                 # check if got result again, if dh then return empty list
                 if not news_results:
-                    print(f"No news found for {ticker}")
+                    logger.warning(f"No news found for {ticker}")
                     return []
 
                 articles = []
@@ -71,15 +73,19 @@ class StockAnalysisService:
                     if article.url:
                         articles.append(article)
 
-                print(f"Successfully fetched {len(articles)} links for {ticker}")
+                logger.success(
+                    f"Successfully fetched {len(articles)} links for {ticker}"
+                )
                 return articles
             except Exception as e:
                 # raise RuntimeError(f"Failed to fetch news for {ticker}: {e}") from e
-                print(
+                logger.exception(
                     f"Error occured while fetching news for {ticker}: {e}\n\nRetrying...(Attempt {i+1}/3)"
                 )
 
-        print("[STOCK_ANALYSIS:FETCH_NEWS_LINKs] Unable to fetch news for {ticker}")
+        logger.warning(
+            "[STOCK_ANALYSIS:FETCH_NEWS_LINKS] Unable to fetch news for {ticker}"
+        )
         return []
 
     async def scrape_and_summarise(self, ticker: str, context: str):
@@ -103,7 +109,7 @@ class StockAnalysisService:
         try:
             await self.save_daily_summary(ticker=ticker, summary_text=ai_text)
         except Exception as e:
-            raise RuntimeError(f"Failed to save daily summary for {ticker}: {e}") from e
+            logger.exception(f"Failed to save daily summary for {ticker}: {e}")
 
         return ai_text
 
@@ -115,9 +121,9 @@ class StockAnalysisService:
             try:
                 await self.redis_client.set(cache_key, summary_text, ex=86400)
             except Exception as e:
-                raise RuntimeError(
+                logger.exception(
                     f"[STOCK_ANALYSIS:SAVE_DAILY_SUMMARY] Failed to insert daily summary into Redis for {ticker}: {e}"
-                ) from e
+                )
 
         if self.summary_repository:
             try:
@@ -125,6 +131,6 @@ class StockAnalysisService:
                     ticker=ticker, summary_text=summary_text
                 )
             except Exception as e:
-                raise RuntimeError(
+                logger.exception(
                     f"[STOCK_ANALYSIS:SAVE_DAILY_SUMMARY] Failed to upsert daily summary into Supabase for {ticker}: {e}"
-                ) from e
+                )

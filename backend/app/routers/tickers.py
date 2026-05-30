@@ -5,6 +5,7 @@ from app.dependencies.redis_client import get_redis
 from app.services.ticker_worker import TickerScraperService
 import json
 from app.dependencies.auth import get_current_user
+from loguru import logger
 
 router = APIRouter(prefix="/api/tickers", tags=["tickers"])
 
@@ -43,7 +44,7 @@ async def get_live_ticker_prices(
 
         # case 1, ticker was cached in redis alrd, can js load the val
         if raw_val and json.loads(raw_val)["status"] == "SUCCESS":
-            print(
+            logger.success(
                 f"[get_live_ticker_prices]: {ticker} cache found with raw val: ",
                 raw_val,
             )
@@ -68,7 +69,7 @@ async def get_live_ticker_prices(
     if tickers_to_scrape:
         scraper = TickerScraperService(redis_client=redis_client)
 
-        print("[/TICKERS] Received tickers to scrape: ", tickers_to_scrape)
+        logger.info("[TICKERS] Received tickers to scrape: ", tickers_to_scrape)
 
         # batch update all the new tickers we see
         await redis_client.sadd("portfolio:tickers", *tickers_to_scrape)
@@ -76,7 +77,7 @@ async def get_live_ticker_prices(
         # batch update the pending tickers that are going to be rescraped
         await redis_client.hmset("stock:prices", pending_hash_updates)
 
-        print("Spinning up background_tasks")
+        logger.info("Spinning up background_tasks")
         background_tasks.add_task(
             scraper.scrape_and_cache_batch,
             tickers_to_scrape,
