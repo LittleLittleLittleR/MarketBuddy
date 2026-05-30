@@ -14,6 +14,26 @@ const UserIDAuth = async () => {
 };
 
 
+const StockIDAuth = async (stockId: string) => {
+  console.log('Checking stock:', stockId);
+
+  const { data: stock, error } = await supabase
+    .from('stocks')
+    .select('ticker')
+    .eq('ticker', stockId)
+    .single();
+
+  console.log('Stock result:', stock);
+  console.log('Stock error:', error);
+
+  if (error || !stock) {
+    throw new Error('Stock not found');
+  }
+
+  return stock;
+};
+
+
 // check if current user is the owner of the portfolio
 const PortfolioIDAuth = async (portfolioId: number) => {
   const user = await UserIDAuth();
@@ -38,7 +58,7 @@ const WatchlistStockIDAuth = async (watchlistStockId: number) => {
   const user = await UserIDAuth();
   const { data: watchlistStock, error } = await supabase
     .from('watchlist_stocks')
-    .select('user_id')
+    .select('user_id, stock_ticker')
     .eq('id', watchlistStockId)
     .single();
   
@@ -48,7 +68,9 @@ const WatchlistStockIDAuth = async (watchlistStockId: number) => {
   if (watchlistStock.user_id !== user.id) {
     throw new Error('Unauthorized');
   }
-
+  if (watchlistStock.stock_ticker) {
+    await StockIDAuth(watchlistStock.stock_ticker);
+  }
   return watchlistStock;
 };
 
@@ -56,7 +78,7 @@ const WatchlistStockIDAuth = async (watchlistStockId: number) => {
 const TradeIDAuth = async (tradeId: number) => {
   const { data: trade, error } = await supabase
     .from('trades')
-    .select('portfolio_id')
+    .select('portfolio_id, ticker')
     .eq('id', tradeId)
     .single();
   
@@ -65,6 +87,7 @@ const TradeIDAuth = async (tradeId: number) => {
   }
 
   await PortfolioIDAuth(trade.portfolio_id);
+  await StockIDAuth(trade.ticker);
 
   return trade;
 };
@@ -72,6 +95,7 @@ const TradeIDAuth = async (tradeId: number) => {
 
 export const dbAuth = {
   checkUserAuth: UserIDAuth,
+  checkStockAuth: StockIDAuth,
   checkPortfolioAuth: PortfolioIDAuth,
   checkTradeAuth: TradeIDAuth,
   checkWatchlistStockAuth: WatchlistStockIDAuth,
