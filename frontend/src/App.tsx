@@ -7,6 +7,7 @@ import Signup from './pages/Auth/Signup';
 import Landing from './pages/Landing/Landing';
 import Home from './pages/Home/Home';
 import Navbar from './components/Navbar';
+import Footer from './components/Footer';
 
 export default function App() {
   return (
@@ -15,7 +16,7 @@ export default function App() {
         <BrowserRouter>
           <AuthProvider>
             <Navbar />
-            <div className='lg:p-16'>
+            <div className='lg:p-8 min-h-screen'>
               <Routes>
                 {/* Public Routes */}
                 <Route path="/" element={<Landing />} />
@@ -28,6 +29,7 @@ export default function App() {
                 </Route>
               </Routes>
             </div>
+            <Footer />
           </AuthProvider>
         </BrowserRouter>
       </ThemeProvider></main>

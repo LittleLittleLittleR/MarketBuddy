@@ -30,10 +30,10 @@ export function WatchlistHeader({ onAddStock, isAdding, isLimitReached }: Watchl
       <form onSubmit={handleSubmit} className="flex gap-2">
         <input
           type="text"
-          placeholder="Enter ticker (e.g. AAPL)"
+          placeholder={isLimitReached ? "Watchlist Full!" : "Enter Ticker (e.g AAPL)"}
           value={newTicker}
           onChange={(e) => setNewTicker(e.target.value.toUpperCase())}
-          className="border rounded-md px-3 py-2 w-64 bg-background text-foreground"
+          className={`border rounded-md px-3 py-2 w-64 bg-background text-foreground ${isLimitReached ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
           disabled={isAdding || isLimitReached}
         />
         <Button type="submit" disabled={isAdding || isLimitReached || !newTicker.trim()}>
