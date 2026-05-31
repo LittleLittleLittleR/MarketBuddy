@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const API_BASE_URL = "http://localhost:8000" || import.meta.env.VITE_API_BASE_URL;
 
 // Ticker Prices API
 export const fetchTickerPrices = async (tickers: string[]) => {
@@ -12,7 +12,7 @@ export const fetchTickerPrices = async (tickers: string[]) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        "Authorization": `Bearer ${accessToken}` 
+        "Authorization": `Bearer ${accessToken}`
       },
       body: JSON.stringify({ tickers }),
     });
