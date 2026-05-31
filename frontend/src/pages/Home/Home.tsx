@@ -47,8 +47,6 @@ type SortConfig = {
 
 const Home = () => {
 
-  const [userEmail, setUserEmail] = useState('')
-  const [username, setUsername] = useState('')
   const [watchlist, setWatchlist] = useState<WatchlistStockDisplay[]>([])
   const [sortConfig, setSortConfig] = useState<SortConfig>({
     key: null,
@@ -73,10 +71,6 @@ const Home = () => {
         navigate('/login')
         return
       }
-
-      setUserEmail(user.email || '')
-      const profile = await profileService.getMyProfile()
-      setUsername(profile.username || '')
 
       const data = await fetchMyWatchlistPrices();
       setWatchlist(data || [])
@@ -180,72 +174,37 @@ const Home = () => {
   }
 
   const fetchSummary = async () => {
-  try {
-    setIsGeneratingSummary(true)
+    try {
+      setIsGeneratingSummary(true)
 
-    await stockSummaryUpdater({ setSummarylist })
+      await stockSummaryUpdater({ setSummarylist })
 
-  } catch (error) {
-    console.error('Failed to fetch summaries:', error)
-  } finally {
-    setIsGeneratingSummary(false)
+    } catch (error) {
+      console.error('Failed to fetch summaries:', error)
+    } finally {
+      setIsGeneratingSummary(false)
+    }
   }
-}
 
   // // refetch watchlist every minute to get latest prices
   // useEffect(() => {
   //   const fetchLatestWatchlist = async () => {
   //     const data = await watchlistStockHooks.fetchWatchlist();
-  
+
   //     setWatchlist(data);
   //     console.log('Watchlist updated:', data);
   //   };
-  
+
   //   fetchLatestWatchlist();
-  
+
   //   const interval = setInterval(fetchLatestWatchlist, 60 * 1000);
-  
+
   //   return () => clearInterval(interval);
   // }, []);
 
   return (
     <div>
       <LiveStockPriceUpdater setWatchlist={setWatchlist} />
-      {/* Navbar */}
-      <header className="border-b">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-          <div>
-            <h1 className="text-xl font-semibold tracking-tight">
-              MarketBuddy
-            </h1>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <span className="hidden text-sm text-muted-foreground md:block">
-              {username || userEmail}
-            </span>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="h-10 w-10 rounded-full p-0">
-                  <Avatar>
-                    <AvatarFallback>
-                      {username.charAt(0).toUpperCase() || userEmail.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                </Button>
-              </DropdownMenuTrigger>
-
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={signOut}>
-                  Logout
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-      </header>
-
       {/* Content */}
       <section className="mx-auto max-w-7xl p-6">
         <div className="mb-6">
