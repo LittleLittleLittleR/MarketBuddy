@@ -17,11 +17,11 @@ const fetchWatchlist = async () => {
       current_price: stockData.current_price,
       change_percent:
         stockData.current_price !== null &&
-        stockData.open_price !== null &&
-        stockData.open_price !== 0
+          stockData.open_price !== null &&
+          stockData.open_price !== 0
           ? ((stockData.current_price - stockData.open_price) /
-              stockData.open_price) *
-            100
+            stockData.open_price) *
+          100
           : null,
     })
   }
@@ -30,6 +30,7 @@ const fetchWatchlist = async () => {
 
 
 const addStock = async (newTicker: string) => {
+  console.log("Received stock to add: ", newTicker)
   try {
     if (!newTicker.trim()) {
       return
