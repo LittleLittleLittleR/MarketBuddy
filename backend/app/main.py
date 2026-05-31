@@ -1,19 +1,19 @@
 import sys
 from loguru import logger
-from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime, timezone
 import asyncio
 from contextlib import asynccontextmanager
-
+from fastapi import FastAPI
 from app.config import settings
 from app.dependencies.supabase_client import get_supabase
 from app.repositories.summary_repo import SummaryRepository
-from app.routers import analysis, tickers
+from app.routers import analysis, tickers, websocket_router
 from app.services.stock_analysis import StockAnalysisService
 from app.services.ticker_worker import TickerScraperService
 from app.dependencies.redis_client import get_redis
 from app.utils.time_utils import get_time_to_6am, is_market_open, sg_time_now
+from app.services.websocket_manager import ws_manager
 
 logger.remove()
 
@@ -115,7 +115,7 @@ async def daily_analysis_scheduler():
 
 
 async def on_the_dot_clock_scheduler():
-    scraper = TickerScraperService(redis_client, max_sub_batch_size=40)
+    scraper = TickerScraperService(redis_client, max_sub_batch_size=5)
 
     logger.info("[MINUTE_SCHEDULER]: Starting scheduler...")
     while True:
@@ -126,7 +126,7 @@ async def on_the_dot_clock_scheduler():
             # sleep til next cycle
             await asyncio.sleep(seconds_until_next_minute)
 
-            if not is_market_open():
+            if is_market_open():
 
                 logger.debug("Market not open. Skipping cycle.")
                 continue
@@ -157,9 +157,14 @@ async def on_the_dot_clock_scheduler():
                     break
 
             if all_tracked_tickers:
-                await scraper.scrape_and_cache_batch(
+                fresh_data = await scraper.scrape_and_cache_batch(
                     all_tracked_tickers, is_clock_sweep=True
                 )
+                if fresh_data:
+                    logger.info(
+                        f"[BROADCAST] Pushing updates for tickers: {list(fresh_data.keys())}"
+                    )
+                    await ws_manager.broadcast_targeted_updates(fresh_prices=fresh_data)
 
             await redis_client.delete("lock:clock_sweep")
             logger.info("Global 1-minute sweep complete.")
@@ -198,9 +203,9 @@ app.add_middleware(
 )
 app.include_router(analysis.router)
 app.include_router(tickers.router)
+app.include_router(websocket_router.router)
 
 
 @app.get("/")
 def read_root():
     return {"root": "welcome to MarketBuddy"}
-
