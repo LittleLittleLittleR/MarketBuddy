@@ -8,11 +8,12 @@ export const fetchTickerSummaries = async (tickers: string[]) => {
     const { data: { session } } = await supabase.auth.getSession();
     const accessToken = session?.access_token;
 
+
     const response = await fetch(`${API_BASE_URL}/api/analyse-stocks`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        "Authorization": `Bearer ${accessToken}` 
+        "Authorization": `Bearer ${accessToken}`
       },
       body: JSON.stringify({ tickers }),
     });
