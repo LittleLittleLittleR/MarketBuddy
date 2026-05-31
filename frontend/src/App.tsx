@@ -1,10 +1,11 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
-import Login from './pages/Auth/Login';
-import Home from './pages/Home/Home';
 import { ThemeProvider } from './components/theme-provider';
+import Login from './pages/Auth/Login';
 import Signup from './pages/Auth/Signup';
+import Landing from './pages/Landing/Landing';
+import Home from './pages/Home/Home';
 
 export default function App() {
   return (
@@ -14,6 +15,7 @@ export default function App() {
           <AuthProvider>
             <Routes>
               {/* Public Routes */}
+              <Route path="/" element={<Landing />} />
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
 
