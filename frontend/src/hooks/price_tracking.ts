@@ -4,7 +4,7 @@ import { fetchMyWatchlistPrices } from './price_fetching';
 
 
 interface Props {
-  setWatchlist: (watchlist: WatchlistStockDisplay[]) => void; 
+  setWatchlist: (watchlist: WatchlistStockDisplay[]) => void;
 }
 
 const LiveStockPriceUpdater = ({ setWatchlist }: Props) => {

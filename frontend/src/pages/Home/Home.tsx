@@ -6,7 +6,8 @@ import { supabase } from '@/lib/supabase'
 import { watchlistStockHooks } from '@/hooks/watchlist_stock'
 
 import type { WatchlistStockDisplay } from '@/types/stock'
-import LiveStockPriceUpdater from '@/hooks/price_tracking'
+// import LiveStockPriceUpdater from '@/hooks/price_tracking'
+import LiveStockPriceUpdater from '@/components/dashboard/LiveStockPriceUpdater'
 import { fetchMyWatchlistPrices } from '@/hooks/price_fetching'
 import { stockSummaryUpdater } from '@/hooks/summary'
 import Summaries from '@/components/dashboard/Summaries'
@@ -14,7 +15,7 @@ import { WatchlistHeader } from '@/components/watchlist/WatchlistHeader'
 import { WatchlistTable } from '@/components/watchlist/WatchlistTable'
 
 const Home = () => {
-
+  const [accessToken, setAccessToken] = useState<string | undefined>(undefined)
   const [watchlist, setWatchlist] = useState<WatchlistStockDisplay[]>([])
   const [newTicker, setNewTicker] = useState('')
   const [isAdding, setIsAdding] = useState(false)
@@ -32,6 +33,14 @@ const Home = () => {
       if (!user) {
         navigate('/login')
         return
+      }
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session?.access_token) {
+          setAccessToken(session.access_token)
+        }
+      } catch (tokenErr) {
+        console.error("Failed to retrieve live session token:", tokenErr)
       }
 
       const data = await fetchMyWatchlistPrices();
@@ -103,7 +112,7 @@ const Home = () => {
 
   return (
     <div>
-      <LiveStockPriceUpdater setWatchlist={setWatchlist} />
+      <LiveStockPriceUpdater setWatchlist={setWatchlist} accessToken={accessToken} />
       {/* Content */}
       <section className="mx-auto max-w-7xl p-6">
         <WatchlistHeader
