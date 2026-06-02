@@ -1,10 +1,10 @@
 import { fetchTickerPrices } from "@/api/ticker";
 import { stockService } from "@/db/stock";
 import { watchlistStockService } from "@/db/watchlist_stock";
-import type { WatchlistStockDisplay } from "@/types/stock";
+import type { StocklistDisplay } from "@/types/stock";
 
 
-// change response to WatchlistStockDisplay[]
+// change response to StocklistDisplay[]
 export const fetchMyWatchlistPrices = async () => {
   try {
     const tickers = (await watchlistStockService.getMyWatchlistStocks()).map(s => s.stock_ticker);
@@ -14,7 +14,7 @@ export const fetchMyWatchlistPrices = async () => {
     const data = await fetchTickerPrices(tickers);
     const stocklist = data.prices;
 
-    const updatedStocks: WatchlistStockDisplay[] = [];
+    const updatedStocks: StocklistDisplay[] = [];
     for (const ticker of tickers) {
       const stock = stocklist[ticker];
       const db_stock = await stockService.getStockByID(ticker);

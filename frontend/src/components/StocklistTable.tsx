@@ -1,4 +1,4 @@
-import type { WatchlistStockDisplay } from '@/types/stock'
+import type { StocklistDisplay } from '@/types/stock'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
@@ -19,16 +19,20 @@ import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { watchlistStockHooks } from '@/hooks/watchlist_stock'
 import { useRealtimePrice } from '@/context/RealtimePriceContext'
-import { Alert, AlertDescription, AlertTitle } from '../ui/alert'
+import { Alert, AlertDescription, AlertTitle } from './ui/alert'
 
-type SortKey = keyof WatchlistStockDisplay
+type SortKey = keyof StocklistDisplay
 
 type SortConfig = {
   key: SortKey | null
   direction: 'asc' | 'desc' | null
 }
 
-export function WatchlistTable() {
+type StocklistTableProps = {
+  stockType: 'watchlist' | 'portfolio' | 'summary'
+}
+
+export function StocklistTable({ stockType }: StocklistTableProps) {
   const { status } = useRealtimePrice();
   const queryClient = useQueryClient();
 
@@ -37,11 +41,14 @@ export function WatchlistTable() {
     direction: null,
   })
 
-  const { data: rawWatchlist = [], isLoading } = useQuery<WatchlistStockDisplay[]>({
+  const { data: rawStocklist = [], isLoading } = useQuery<StocklistDisplay[]>({
     queryKey: ['watchlistPrices'],
     queryFn: async () => {
-      const response = await watchlistStockHooks.fetchWatchlist()
-      return response || []
+      if (stockType === 'watchlist') {
+        const response = await watchlistStockHooks.fetchWatchlist()
+        return response || []
+      }
+      return []
     },
     staleTime: Infinity,
   })
@@ -52,7 +59,7 @@ export function WatchlistTable() {
       return ticker
     },
     onSuccess: (deletedTicker) => {
-      queryClient.setQueryData(['watchlistPrices'], (oldData: WatchlistStockDisplay[] | undefined) => {
+      queryClient.setQueryData(['watchlistPrices'], (oldData: StocklistDisplay[] | undefined) => {
         return oldData ? oldData.filter(stock => stock.ticker !== deletedTicker) : []
       })
     },
@@ -62,7 +69,7 @@ export function WatchlistTable() {
   })
 
   const watchlist = useMemo(() => {
-    return rawWatchlist.map((stock) => {
+    return rawStocklist.map((stock) => {
       const price = (stock).current_price ?? stock.current_price ?? 0
 
       return {
@@ -71,7 +78,7 @@ export function WatchlistTable() {
         change_percent: stock.change_percent
       }
     })
-  }, [rawWatchlist])
+  }, [rawStocklist])
 
 
 
@@ -170,10 +177,10 @@ export function WatchlistTable() {
               <TableRow>
                 {['ticker', 'company_name', 'current_price', 'change_percent'].map((field) => (
                   <TableHead key={field} className="w-1/4 text-center">
-                    <Button variant="ghost" onClick={() => handleSort(field as keyof WatchlistStockDisplay)}>
+                    <Button variant="ghost" onClick={() => handleSort(field as keyof StocklistDisplay)}>
                       <span className="capitalize">{field.replace('_', ' ')}</span>
                       <span className="ml-2 inline-block w-4 text-center">
-                        {getSortIndicator(field as keyof WatchlistStockDisplay)}
+                        {getSortIndicator(field as keyof StocklistDisplay)}
                       </span>
                     </Button>
                   </TableHead>

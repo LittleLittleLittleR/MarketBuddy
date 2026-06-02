@@ -8,16 +8,16 @@ export interface StockResponse {
   updated_at: string | null;
 }
 
-export interface WatchlistStockDisplay {
+export interface StocklistDisplay {
   ticker: string;
   company_name: string;
   current_price: number | null;
   change_percent: number | null;
 }
 
-export interface RawWatchlistStock {
+export interface RawStocklistStock {
   ticker: string;
   company_name: string;
-  price: number | null;
-  opening_price: number | null;
+  current_price: number | null;
+  open_price: number | null;
 }

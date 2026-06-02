@@ -1,17 +1,16 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { supabase } from '@/lib/supabase'
 
 import { watchlistStockHooks } from '@/hooks/watchlist_stock'
 
-import type { WatchlistStockDisplay } from '@/types/stock'
-import { fetchMyWatchlistPrices } from '@/hooks/price_fetching'
+import type { StocklistDisplay } from '@/types/stock'
 import { stockSummaryUpdater } from '@/hooks/summary'
 import Summaries from '@/components/dashboard/Summaries'
 import { WatchlistHeader } from '@/components/watchlist/WatchlistHeader'
-import { WatchlistTable } from '@/components/watchlist/WatchlistTable'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { StocklistTable } from '@/components/StocklistTable'
+import { useQuery } from '@tanstack/react-query'
 
 const Home = () => {
   const [isAdding, setIsAdding] = useState(false)
@@ -19,7 +18,6 @@ const Home = () => {
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false)
 
   const navigate = useNavigate()
-  const queryClient = useQueryClient();
 
   // for checking permission
   useEffect(() => {
@@ -37,9 +35,8 @@ const Home = () => {
     fetchUser()
   }, [navigate])
 
-
   // react query for cached watchlistPrices
-  const { data: watchlist = [] } = useQuery<WatchlistStockDisplay[]>({
+  const { data: watchlistStocks = [] } = useQuery<StocklistDisplay[]>({
     queryKey: ['watchlistPrices'], // when invalidated, this repolls 
     queryFn: async () => {
       const response = await watchlistStockHooks.fetchWatchlist()
@@ -48,32 +45,15 @@ const Home = () => {
     staleTime: Infinity,
   })
 
-  const addStockMutation = useMutation({
-    mutationFn: async (ticker: string) => {
-      await watchlistStockHooks.addStock(ticker)
+  // react query for cached summaryPrices
+  const { data: summarylistStocks = [] } = useQuery<StocklistDisplay[]>({
+    queryKey: ['summaryPrices'],
+    queryFn: async () => {
+      // TODO: implement summaryPrices query function
+      return [];
     },
-    onMutate: () => {
-      setIsAdding(true)
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['watchlistPrices'] }) // invalidate querykey for repoll
-    },
-    onError: (error) => {
-      console.error('Failed to add stock entry:', error)
-    },
-    onSettled: () => {
-      setIsAdding(false)
-    }
+    staleTime: Infinity,
   })
-
-  const handleAddStock = async (ticker: string) => {
-    const cleanTicker = ticker.toUpperCase()
-    if (watchlist.length >= 3) {
-      console.warn("Watchlist threshold met. Max 3 entries allowed.")
-      return
-    }
-    addStockMutation.mutate(cleanTicker)
-  }
 
   const fetchSummary = async () => {
     try {
@@ -91,16 +71,18 @@ const Home = () => {
       {/* Content */}
       <section className="mx-auto max-w-7xl p-6">
         <WatchlistHeader
-          onAddStock={handleAddStock}
+          watchlist={watchlistStocks}
           isAdding={isAdding}
-          isLimitReached={watchlist.length >= 3}
+          setIsAdding={setIsAdding}
         />
-        <WatchlistTable />
+        <StocklistTable
+          stockType={"watchlist"}
+        />
         <Summaries
           summaryList={summarylist}
           isFetching={isGeneratingSummary}
           onFetchSummaries={fetchSummary}
-          disableFetch={watchlist.length === 0} />
+          disableFetch={watchlistStocks.length === 0} />
       </section>
     </div>
   )

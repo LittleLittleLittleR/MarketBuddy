@@ -1,9 +1,9 @@
 import { useEffect, useRef } from 'react';
-import type { WatchlistStockDisplay } from '@/types/stock';
+import type { StocklistDisplay } from '@/types/stock';
 import { useAuth } from '@/context/AuthContext';
 
 interface Props {
-  setWatchlist: React.Dispatch<React.SetStateAction<WatchlistStockDisplay[]>>;
+  setWatchlist: React.Dispatch<React.SetStateAction<StocklistDisplay[]>>;
   accessToken: string | undefined
 }
 

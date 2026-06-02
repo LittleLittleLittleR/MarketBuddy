@@ -1,11 +1,11 @@
 import { stockService } from "@/db/stock"
 import { watchlistStockService } from "@/db/watchlist_stock"
-import type { StockResponse, WatchlistStockDisplay } from "@/types/stock"
+import type { StockResponse, StocklistDisplay } from "@/types/stock"
 
 const fetchWatchlist = async () => {
   const watchlistData = await watchlistStockService.getMyWatchlistStocks()
 
-  const stockList: WatchlistStockDisplay[] = []
+  const stockList: StocklistDisplay[] = []
 
   for (const stock of watchlistData) {
     const stockData: StockResponse =

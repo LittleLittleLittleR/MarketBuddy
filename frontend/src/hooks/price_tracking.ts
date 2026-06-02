@@ -1,10 +1,10 @@
 import { useEffect } from 'react';
-import type { WatchlistStockDisplay } from '@/types/stock';
+import type { StocklistDisplay } from '@/types/stock';
 import { fetchMyWatchlistPrices } from './price_fetching';
 
 
 interface Props {
-  setWatchlist: (watchlist: WatchlistStockDisplay[]) => void;
+  setWatchlist: (watchlist: StocklistDisplay[]) => void;
 }
 
 const LiveStockPriceUpdater = ({ setWatchlist }: Props) => {
