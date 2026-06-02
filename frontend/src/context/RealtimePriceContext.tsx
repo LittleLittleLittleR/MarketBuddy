@@ -100,7 +100,6 @@ export const RealtimePriceProvider = ({ children }: { children: React.ReactNode 
           // updates into TanStack Query's Cache
           queryClient.setQueryData(['watchlistPrices'], (oldData: any) => {
             if (!oldData) return oldData;
-            console.log("oldData: ", oldData)
 
             return oldData.map((stock: any) => {
               const liveUpdate = incomingPrices[stock.ticker.toUpperCase()];

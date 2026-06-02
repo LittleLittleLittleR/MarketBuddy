@@ -1,4 +1,4 @@
-import { watchlistStockService } from '@/db/watchlist_stock';
+import { summarylistStockService } from '@/db/summarylist_stock';
 import { fetchTickerSummaries } from '@/api/summary';
 
 interface Props {
@@ -7,7 +7,7 @@ interface Props {
 
 export const stockSummaryUpdater = async ({ setSummarylist }: Props) => {
   try {
-    const tickers = (await watchlistStockService.getMyWatchlistStocks()).map(s => s.stock_ticker);
+    const tickers = (await summarylistStockService.getMySummarylistStocks()).map(s => s.stock_ticker);
 
     if (!tickers.length) return;
       
