@@ -69,6 +69,26 @@ const WatchlistStockIDAuth = async (watchlistStockId: number) => {
   return watchlistStock;
 };
 
+const SummarylistStockIDAuth = async (summarylistStockId: number) => {
+  const user = await UserIDAuth();
+  const { data: summarylistStock, error } = await supabase
+    .from('summarylist_stocks')
+    .select('user_id, stock_ticker')
+    .eq('id', summarylistStockId)
+    .single();
+  
+  if (error || !summarylistStock) {
+    throw new Error('Summarylist stock not found');
+  }
+  if (summarylistStock.user_id !== user.id) {
+    throw new Error('Unauthorized');
+  }
+  if (summarylistStock.stock_ticker) {
+    await StockIDAuth(summarylistStock.stock_ticker);
+  }
+  return summarylistStock;
+};
+
 
 const TradeIDAuth = async (tradeId: number) => {
   const { data: trade, error } = await supabase
@@ -94,4 +114,5 @@ export const dbAuth = {
   checkPortfolioAuth: PortfolioIDAuth,
   checkTradeAuth: TradeIDAuth,
   checkWatchlistStockAuth: WatchlistStockIDAuth,
+  checkSummarylistStockAuth: SummarylistStockIDAuth,
 }

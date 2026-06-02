@@ -1,17 +1,18 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 
 import { supabase } from '@/lib/supabase'
-
-import { watchlistStockHooks } from '@/hooks/watchlist_stock'
-
-import type { WatchlistStockDisplay } from '@/types/stock'
-import { fetchMyWatchlistPrices } from '@/hooks/price_fetching'
+import { stocklistHooks } from '@/hooks/stocklist'
 import { stockSummaryUpdater } from '@/hooks/summary'
+
+import type { StocklistDisplay } from '@/types/stock'
+
 import Summaries from '@/components/dashboard/Summaries'
-import { WatchlistHeader } from '@/components/watchlist/WatchlistHeader'
-import { WatchlistTable } from '@/components/watchlist/WatchlistTable'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { StocklistHeader } from '@/components/stocklist/StocklistHeader'
+import { StocklistTable } from '@/components/stocklist/StocklistTable'
+
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 const Home = () => {
   const [isAdding, setIsAdding] = useState(false)
@@ -19,7 +20,6 @@ const Home = () => {
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false)
 
   const navigate = useNavigate()
-  const queryClient = useQueryClient();
 
   // for checking permission
   useEffect(() => {
@@ -37,43 +37,25 @@ const Home = () => {
     fetchUser()
   }, [navigate])
 
-
-  // react query for cached watchlistPrices
-  const { data: watchlist = [] } = useQuery<WatchlistStockDisplay[]>({
-    queryKey: ['watchlistPrices'], // when invalidated, this repolls 
+  // watchlist
+  const { data: watchlistStocks = [] } = useQuery<StocklistDisplay[]>({
+    queryKey: ['watchlistPrices'],
     queryFn: async () => {
-      const response = await watchlistStockHooks.fetchWatchlist()
-      return response || []
+      const res = await stocklistHooks.fetchStocklist({ stockType: 'watchlist' })
+      return res || []
     },
     staleTime: Infinity,
   })
 
-  const addStockMutation = useMutation({
-    mutationFn: async (ticker: string) => {
-      await watchlistStockHooks.addStock(ticker)
+  // summarylist
+  const { data: summarylistStocks = [] } = useQuery<StocklistDisplay[]>({
+    queryKey: ['summarylistPrices'],
+    queryFn: async () => {
+      const res = await stocklistHooks.fetchStocklist({ stockType: 'summarylist' })
+      return res || []
     },
-    onMutate: () => {
-      setIsAdding(true)
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['watchlistPrices'] }) // invalidate querykey for repoll
-    },
-    onError: (error) => {
-      console.error('Failed to add stock entry:', error)
-    },
-    onSettled: () => {
-      setIsAdding(false)
-    }
+    staleTime: Infinity,
   })
-
-  const handleAddStock = async (ticker: string) => {
-    const cleanTicker = ticker.toUpperCase()
-    if (watchlist.length >= 3) {
-      console.warn("Watchlist threshold met. Max 3 entries allowed.")
-      return
-    }
-    addStockMutation.mutate(cleanTicker)
-  }
 
   const fetchSummary = async () => {
     try {
@@ -87,23 +69,54 @@ const Home = () => {
   }
 
   return (
-    <div>
-      {/* Content */}
-      <section className="mx-auto max-w-7xl p-6">
-        <WatchlistHeader
-          onAddStock={handleAddStock}
-          isAdding={isAdding}
-          isLimitReached={watchlist.length >= 3}
-        />
-        <WatchlistTable />
-        <Summaries
-          summaryList={summarylist}
-          isFetching={isGeneratingSummary}
-          onFetchSummaries={fetchSummary}
-          disableFetch={watchlist.length === 0} />
-      </section>
+    <div className="mx-auto max-w-7xl p-6">
+      <Tabs defaultValue="summarylist" className="w-full">
+
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="summarylist">Summary</TabsTrigger>
+          <TabsTrigger value="watchlist">Watchlist</TabsTrigger>
+          <TabsTrigger value="profiles">Portfolios</TabsTrigger>
+        </TabsList>
+
+        {/* SUMMARYLIST */}
+        <TabsContent value="summarylist" className="space-y-6">
+          <StocklistHeader
+            stocklist={summarylistStocks}
+            isAdding={isAdding}
+            setIsAdding={setIsAdding}
+            stockType="summarylist"
+          />
+
+          <StocklistTable stockType="summarylist" />
+
+          <Summaries
+            summaryList={summarylist}
+            isFetching={isGeneratingSummary}
+            onFetchSummaries={fetchSummary}
+            disableFetch={summarylistStocks.length === 0}
+          />
+        </TabsContent>
+
+        {/* WATCHLIST */}
+        <TabsContent value="watchlist" className="text-muted-foreground">
+          <StocklistHeader
+            stocklist={watchlistStocks}
+            isAdding={isAdding}
+            setIsAdding={setIsAdding}
+            stockType="watchlist"
+          />
+
+          <StocklistTable stockType="watchlist" />
+        </TabsContent>
+
+        {/* PORTFOLIOS */}
+        <TabsContent value="profiles" className="text-muted-foreground">
+          Portfolios coming soon.
+        </TabsContent>
+
+      </Tabs>
     </div>
   )
 }
 
-export default Home;
+export default Home
