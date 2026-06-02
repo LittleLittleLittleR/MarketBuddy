@@ -42,7 +42,7 @@ export function StocklistTable({ stockType }: StocklistTableProps) {
   })
 
   const { data: rawStocklist = [], isLoading } = useQuery<StocklistDisplay[]>({
-    queryKey: ['stocklistPrices'],
+    queryKey: [`${stockType}Prices`],
     queryFn: async () => {
       if (stockType === 'watchlist') {
         const response = await stocklistHooks.fetchStocklist({ stockType })
@@ -64,7 +64,7 @@ export function StocklistTable({ stockType }: StocklistTableProps) {
       return ticker
     },
     onSuccess: (deletedTicker) => {
-      queryClient.setQueryData(['stocklistPrices'], (oldData: StocklistDisplay[] | undefined) => {
+      queryClient.setQueryData([`${stockType}Prices`], (oldData: StocklistDisplay[] | undefined) => {
         return oldData ? oldData.filter(stock => stock.ticker !== deletedTicker) : []
       })
     },

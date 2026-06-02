@@ -50,7 +50,8 @@ export const RealtimePriceProvider = ({ children }: { children: React.ReactNode 
 
     setStatus("connecting")
 
-    const WS_URL = `ws://${API_BASE_URL}/ws/prices?token=${session.access_token}`;
+    
+    const WS_URL = `wss://orbital-fastapi-backend-production.up.railway.app/ws/prices?token=${session?.access_token}`
     const rws = new ReconnectingWebSocket(WS_URL, [], {
       maxReconnectionDelay: 20000, // Caps exponential backoff at 10 seconds max
       minReconnectionDelay: 5000,  // Starts retrying after 5 second if connection drops
