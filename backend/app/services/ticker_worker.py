@@ -26,6 +26,7 @@ class TickerScraperService:
         if not tickers:
             return
 
+        logger.debug(f"Received tickers: {tickers}")
         # adhoc
         if not is_clock_sweep:
             tickers_to_scrape = []
@@ -50,8 +51,19 @@ class TickerScraperService:
             for i in range(0, len(tickers), self.max_sub_batch_size)
         ]
 
+        #  logger.debug(f"sub_batches: {sub_batches}")
         # concurrently call scraper for each chunk
-        await asyncio.gather(*[self._scrape_chunk(chunk) for chunk in sub_batches])
+        chunk_results = await asyncio.gather(
+            *[self._scrape_chunk(chunk) for chunk in sub_batches]
+        )
+        combined_payload = {}
+        for result in chunk_results:
+            if result and isinstance(result, dict):
+                combined_payload.update(result)
+
+        # This unified master dictionary gets passed directly to your WebSocket rooms!
+        # if combined_payload:
+        # logger.debug(f"Combined Payload: {combined_payload}")
 
         # release locks after all chunks finish processing
         if not is_clock_sweep:
@@ -65,6 +77,9 @@ class TickerScraperService:
             logger.info("[IS_CLOCK_SWEEP] Deleting lock keys...")
             for ticker in tickers:
                 await self.redis_client.delete(f"lock:scraping:{ticker}")
+
+        logger.debug(f"Combined Payload: {combined_payload}")
+        return combined_payload
 
     async def _scrape_chunk(self, tickers: list[str]):
         ticker_string = " ".join(tickers)
@@ -142,3 +157,4 @@ class TickerScraperService:
                 payload,
             )
             await self.redis_client.hmset("stock:prices", payload)
+        return payload

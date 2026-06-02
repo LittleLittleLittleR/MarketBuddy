@@ -6,23 +6,22 @@ import { supabase } from '@/lib/supabase'
 import { watchlistStockHooks } from '@/hooks/watchlist_stock'
 
 import type { WatchlistStockDisplay } from '@/types/stock'
-import LiveStockPriceUpdater from '@/hooks/price_tracking'
 import { fetchMyWatchlistPrices } from '@/hooks/price_fetching'
 import { stockSummaryUpdater } from '@/hooks/summary'
 import Summaries from '@/components/dashboard/Summaries'
 import { WatchlistHeader } from '@/components/watchlist/WatchlistHeader'
 import { WatchlistTable } from '@/components/watchlist/WatchlistTable'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 const Home = () => {
-
-  const [watchlist, setWatchlist] = useState<WatchlistStockDisplay[]>([])
-  const [newTicker, setNewTicker] = useState('')
   const [isAdding, setIsAdding] = useState(false)
   const [summarylist, setSummarylist] = useState<string[]>([])
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false)
 
   const navigate = useNavigate()
+  const queryClient = useQueryClient();
 
+  // for checking permission
   useEffect(() => {
     const fetchUser = async () => {
       const {
@@ -33,46 +32,48 @@ const Home = () => {
         navigate('/login')
         return
       }
-
-      const data = await fetchMyWatchlistPrices();
-      setWatchlist(data || [])
     }
 
     fetchUser()
   }, [navigate])
 
-  const handleAddStock = async (ticker: string) => {
-    ticker = ticker.toUpperCase();
-    try {
-      if (watchlist.length === 3) {
-        console.log("Watchlist full! Unable to add stock")
-        return
-      }
 
-      setIsAdding(true)
-      console.log("Adding Stock...", ticker)
+  // react query for cached watchlistPrices
+  const { data: watchlist = [] } = useQuery<WatchlistStockDisplay[]>({
+    queryKey: ['watchlistPrices'], // when invalidated, this repolls 
+    queryFn: async () => {
+      const response = await watchlistStockHooks.fetchWatchlist()
+      return response || []
+    },
+    staleTime: Infinity,
+  })
+
+  const addStockMutation = useMutation({
+    mutationFn: async (ticker: string) => {
       await watchlistStockHooks.addStock(ticker)
-      const data = await fetchMyWatchlistPrices();
-      console.log("Data fetched from watchlist is: ", data)
-      setWatchlist(data || [])
-    } catch (error) {
-      console.error('Failed to add stock:', error)
-    } finally {
+    },
+    onMutate: () => {
+      setIsAdding(true)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['watchlistPrices'] }) // invalidate querykey for repoll
+    },
+    onError: (error) => {
+      console.error('Failed to add stock entry:', error)
+    },
+    onSettled: () => {
       setIsAdding(false)
     }
-  }
+  })
 
-  const handleDeleteStock = async (ticker: string) => {
-    try {
-      await watchlistStockHooks.deleteStock(ticker)
-      const data = await fetchMyWatchlistPrices();
-      setWatchlist(data || []);
-
-    } catch (error) {
-      console.error('Failed to delete stock:', error)
+  const handleAddStock = async (ticker: string) => {
+    const cleanTicker = ticker.toUpperCase()
+    if (watchlist.length >= 3) {
+      console.warn("Watchlist threshold met. Max 3 entries allowed.")
+      return
     }
+    addStockMutation.mutate(cleanTicker)
   }
-
 
   const fetchSummary = async () => {
     try {
@@ -85,25 +86,8 @@ const Home = () => {
     }
   }
 
-  // // refetch watchlist every minute to get latest prices
-  // useEffect(() => {
-  //   const fetchLatestWatchlist = async () => {
-  //     const data = await watchlistStockHooks.fetchWatchlist();
-
-  //     setWatchlist(data);
-  //     console.log('Watchlist updated:', data);
-  //   };
-
-  //   fetchLatestWatchlist();
-
-  //   const interval = setInterval(fetchLatestWatchlist, 60 * 1000);
-
-  //   return () => clearInterval(interval);
-  // }, []);
-
   return (
     <div>
-      <LiveStockPriceUpdater setWatchlist={setWatchlist} />
       {/* Content */}
       <section className="mx-auto max-w-7xl p-6">
         <WatchlistHeader
@@ -111,10 +95,7 @@ const Home = () => {
           isAdding={isAdding}
           isLimitReached={watchlist.length >= 3}
         />
-        <WatchlistTable
-          watchlist={watchlist}
-          onDeleteStock={handleDeleteStock}
-        />
+        <WatchlistTable />
         <Summaries
           summaryList={summarylist}
           isFetching={isGeneratingSummary}

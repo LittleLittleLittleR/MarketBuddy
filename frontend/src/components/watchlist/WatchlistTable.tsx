@@ -16,11 +16,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useMemo, useState } from 'react'
-
-type WatchlistTableProps = {
-  watchlist: WatchlistStockDisplay[]
-  onDeleteStock: (ticker: string) => Promise<void>
-}
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { watchlistStockHooks } from '@/hooks/watchlist_stock'
+import { useRealtimePrice } from '@/context/RealtimePriceContext'
+import { Alert, AlertDescription, AlertTitle } from '../ui/alert'
 
 type SortKey = keyof WatchlistStockDisplay
 
@@ -29,12 +28,51 @@ type SortConfig = {
   direction: 'asc' | 'desc' | null
 }
 
-export function WatchlistTable({ watchlist, onDeleteStock }: WatchlistTableProps) {
+export function WatchlistTable() {
+  const { status } = useRealtimePrice();
+  const queryClient = useQueryClient();
 
   const [sortConfig, setSortConfig] = useState<SortConfig>({
     key: null,
     direction: null,
   })
+
+  const { data: rawWatchlist = [], isLoading } = useQuery<WatchlistStockDisplay[]>({
+    queryKey: ['watchlistPrices'],
+    queryFn: async () => {
+      const response = await watchlistStockHooks.fetchWatchlist()
+      return response || []
+    },
+    staleTime: Infinity,
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: async (ticker: string) => {
+      await watchlistStockHooks.deleteStock(ticker)
+      return ticker
+    },
+    onSuccess: (deletedTicker) => {
+      queryClient.setQueryData(['watchlistPrices'], (oldData: WatchlistStockDisplay[] | undefined) => {
+        return oldData ? oldData.filter(stock => stock.ticker !== deletedTicker) : []
+      })
+    },
+    onError: (err) => {
+      console.error("Failed during delete operation for ticker: ", err)
+    }
+  })
+
+  const watchlist = useMemo(() => {
+    return rawWatchlist.map((stock) => {
+      const price = (stock).current_price ?? stock.current_price ?? 0
+
+      return {
+        ...stock,
+        current_price: price,
+        change_percent: stock.change_percent
+      }
+    })
+  }, [rawWatchlist])
+
 
 
   const handleSort = (key: SortKey) => {
@@ -99,60 +137,85 @@ export function WatchlistTable({ watchlist, onDeleteStock }: WatchlistTableProps
 
     return '↕'
   }
-
+  if (isLoading) {
+    return <div className="text-center p-12 text-muted-foreground animate-pulse text-sm">Loading your watchlist...</div>
+  }
   return (
-    <Card>
-      <CardContent className="p-0">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              {['ticker', 'company_name', 'current_price', 'change_percent'].map((field) => (
-                <TableHead key={field} className="w-1/4 text-center">
-                  <Button variant="ghost" onClick={() => handleSort(field as keyof WatchlistStockDisplay)}>
-                    <span className="capitalize">{field.replace('_', ' ')}</span>
-                    <span className="ml-2 inline-block w-4 text-center">
-                      {getSortIndicator(field as keyof WatchlistStockDisplay)}
-                    </span>
-                  </Button>
-                </TableHead>
-              ))}
-              <TableHead className="w-12" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {sortedData.map((stock) => (
-              <TableRow key={stock.ticker}>
-                <TableCell className="font-medium text-center">{stock.ticker}</TableCell>
-                <TableCell className="text-center">{stock.company_name}</TableCell>
-                <TableCell className="text-center">
-                  {stock.current_price !== null ? `$${stock.current_price.toFixed(2)}` : 'N/A'}
-                </TableCell>
-                <TableCell
-                  className={`text-center font-medium ${stock.change_percent !== null && stock.change_percent >= 0
-                    ? 'text-green-500'
-                    : 'text-red-500'
-                    }`}
-                >
-                  {stock.change_percent !== null && stock.change_percent >= 0 ? '+' : ''}
-                  {stock.change_percent !== null ? `${stock.change_percent.toFixed(2)}%` : 'N/A'}
-                </TableCell>
-                <TableCell className="text-center">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="h-8 w-8 p-0">⋮</Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => onDeleteStock(stock.ticker)} className="text-red-500 cursor-pointer">
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
+    <div>
+      {status === 'connecting' && (
+        <div className="bg-amber-500/10 border border-amber-500/30 text-amber-500 px-4 py-2 rounded-md text-xs animate-pulse text-center">
+          Live price stream disconnected. Attempting to re-establish link...
+        </div>
+      )}
+
+      {status === 'error' && (
+        <Alert variant="destructive" className="bg-red-950/20 border-red-500/30">
+          <AlertTitle>Connection Dropped</AlertTitle>
+          <AlertDescription className="text-sm">
+            We maxed out connection attempts to the real-time data terminal. Live Updates are paused.
+            <button
+              onClick={() => window.location.reload()}
+              className="ml-2 underline hover:text-white font-medium"
+            >
+              Click here to reload stream manually.
+            </button>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      <Card>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                {['ticker', 'company_name', 'current_price', 'change_percent'].map((field) => (
+                  <TableHead key={field} className="w-1/4 text-center">
+                    <Button variant="ghost" onClick={() => handleSort(field as keyof WatchlistStockDisplay)}>
+                      <span className="capitalize">{field.replace('_', ' ')}</span>
+                      <span className="ml-2 inline-block w-4 text-center">
+                        {getSortIndicator(field as keyof WatchlistStockDisplay)}
+                      </span>
+                    </Button>
+                  </TableHead>
+                ))}
+                <TableHead className="w-12" />
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
+            </TableHeader>
+            <TableBody>
+              {sortedData.map((stock) => (
+                <TableRow key={stock.ticker}>
+                  <TableCell className="font-medium text-center">{stock.ticker}</TableCell>
+                  <TableCell className="text-center">{stock.company_name}</TableCell>
+                  <TableCell className="text-center">
+                    {stock.current_price !== null ? `$${stock.current_price.toFixed(2)}` : 'N/A'}
+                  </TableCell>
+                  <TableCell
+                    className={`text-center font-medium ${stock.change_percent !== null && stock.change_percent >= 0
+                      ? 'text-green-500'
+                      : 'text-red-500'
+                      }`}
+                  >
+                    {stock.change_percent !== null && stock.change_percent >= 0 ? '+' : ''}
+                    {stock.change_percent !== null ? `${stock.change_percent.toFixed(2)}%` : 'N/A'}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">⋮</Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => deleteMutation.mutate(stock.ticker)} className="text-red-500 cursor-pointer">
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
   )
 }
