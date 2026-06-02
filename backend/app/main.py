@@ -126,8 +126,7 @@ async def on_the_dot_clock_scheduler():
             # sleep til next cycle
             await asyncio.sleep(seconds_until_next_minute)
 
-            if is_market_open():
-
+            if not is_market_open():
                 logger.debug("Market not open. Skipping cycle.")
                 continue
 
