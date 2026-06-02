@@ -8,6 +8,12 @@ export interface StockResponse {
   updated_at: string | null;
 }
 
+export interface StocklistResponse {
+  id: number;
+  user_id: string;
+  stock_ticker: string;
+}
+
 export interface StocklistDisplay {
   ticker: string;
   company_name: string;

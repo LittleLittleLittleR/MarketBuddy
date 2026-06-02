@@ -2,29 +2,33 @@ import { useState, type Dispatch, type SetStateAction } from 'react'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import type { StocklistDisplay } from '@/types/stock';
-import { watchlistStockHooks } from '@/hooks/watchlist_stock';
+import { stocklistHooks } from '@/hooks/stocklist';
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
-type WatchlistHeaderProps = {
-  watchlist: StocklistDisplay[];
+type StocklistHeaderProps = {
+  stocklist: StocklistDisplay[];
   isAdding: boolean
   setIsAdding: Dispatch<SetStateAction<boolean>>
+  stockType: 'watchlist' | 'portfolio' | 'summarylist';
 }
 
-export function WatchlistHeader({ watchlist, isAdding, setIsAdding }: WatchlistHeaderProps) {
+export function StocklistHeader({ stocklist, isAdding, setIsAdding, stockType }: StocklistHeaderProps) {
   const [newTicker, setNewTicker] = useState('')
   const queryClient = useQueryClient();
-  const isLimitReached = watchlist.length >= 3
+  const isLimitReached = stocklist.length >= 3 && stockType === 'summarylist' // only apply limit to summarylist
 
   const addStockMutation = useMutation({
     mutationFn: async (ticker: string) => {
-      await watchlistStockHooks.addStock(ticker)
+      await stocklistHooks.addStock({ 
+        stockType,
+        newTicker: ticker 
+      })
     },
     onMutate: () => {
       setIsAdding(true)
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['watchlistPrices'] }) // invalidate querykey for repoll
+      queryClient.invalidateQueries({ queryKey: [`${stockType}Prices`] }) // invalidate querykey for repoll
     },
     onError: (error) => {
       console.error('Failed to add stock entry:', error)
@@ -36,8 +40,8 @@ export function WatchlistHeader({ watchlist, isAdding, setIsAdding }: WatchlistH
 
   const handleAddStock = async (ticker: string) => {
     const cleanTicker = ticker.toUpperCase()
-    if (watchlist.length >= 3) {
-      console.warn("Watchlist threshold met. Max 3 entries allowed.")
+    if (isLimitReached) {
+      console.warn("Summary list threshold met. Max 3 entries allowed.")
       return
     }
     addStockMutation.mutate(cleanTicker)
@@ -54,7 +58,7 @@ export function WatchlistHeader({ watchlist, isAdding, setIsAdding }: WatchlistH
   return (
     <div className="mb-6">
       <div>
-        <h2 className="text-3xl font-bold tracking-tight">Your Watchlist</h2>
+        <h2 className="text-3xl font-bold tracking-tight">Your {stockType === 'watchlist' ? 'Watchlist' : stockType === 'portfolio' ? 'Portfolio' : 'Summary List'}</h2>
         <p className="text-muted-foreground">Track your favourite stocks in one place</p>
       </div>
       <Separator className="my-6" />
@@ -62,7 +66,7 @@ export function WatchlistHeader({ watchlist, isAdding, setIsAdding }: WatchlistH
       <form onSubmit={handleSubmit} className="flex gap-2">
         <input
           type="text"
-          placeholder={isLimitReached ? "Watchlist Full!" : "Enter Ticker (e.g AAPL)"}
+          placeholder={isLimitReached ? `${stockType === 'summarylist' ? 'Summary List' : 'Watchlist'} Full!` : `Enter Ticker (e.g AAPL)`}
           value={newTicker}
           onChange={(e) => setNewTicker(e.target.value.toUpperCase())}
           className={`border rounded-md px-3 py-2 w-64 bg-background text-foreground ${isLimitReached ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}

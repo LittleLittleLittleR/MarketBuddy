@@ -17,9 +17,9 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { watchlistStockHooks } from '@/hooks/watchlist_stock'
+import { stocklistHooks } from '@/hooks/stocklist'
 import { useRealtimePrice } from '@/context/RealtimePriceContext'
-import { Alert, AlertDescription, AlertTitle } from './ui/alert'
+import { Alert, AlertDescription, AlertTitle } from '../ui/alert'
 
 type SortKey = keyof StocklistDisplay
 
@@ -29,7 +29,7 @@ type SortConfig = {
 }
 
 type StocklistTableProps = {
-  stockType: 'watchlist' | 'portfolio' | 'summary'
+  stockType: 'watchlist' | 'portfolio' | 'summarylist'
 }
 
 export function StocklistTable({ stockType }: StocklistTableProps) {
@@ -42,10 +42,13 @@ export function StocklistTable({ stockType }: StocklistTableProps) {
   })
 
   const { data: rawStocklist = [], isLoading } = useQuery<StocklistDisplay[]>({
-    queryKey: ['watchlistPrices'],
+    queryKey: ['stocklistPrices'],
     queryFn: async () => {
       if (stockType === 'watchlist') {
-        const response = await watchlistStockHooks.fetchWatchlist()
+        const response = await stocklistHooks.fetchStocklist({ stockType })
+        return response || []
+      } else if (stockType === 'summarylist') {
+        const response = await stocklistHooks.fetchStocklist({ stockType })
         return response || []
       }
       return []
@@ -55,11 +58,13 @@ export function StocklistTable({ stockType }: StocklistTableProps) {
 
   const deleteMutation = useMutation({
     mutationFn: async (ticker: string) => {
-      await watchlistStockHooks.deleteStock(ticker)
+      await stocklistHooks.deleteStock({ 
+        stockType, newTicker: ticker 
+      })
       return ticker
     },
     onSuccess: (deletedTicker) => {
-      queryClient.setQueryData(['watchlistPrices'], (oldData: StocklistDisplay[] | undefined) => {
+      queryClient.setQueryData(['stocklistPrices'], (oldData: StocklistDisplay[] | undefined) => {
         return oldData ? oldData.filter(stock => stock.ticker !== deletedTicker) : []
       })
     },

@@ -3,13 +3,13 @@ import { useNavigate } from 'react-router-dom'
 
 import { supabase } from '@/lib/supabase'
 
-import { watchlistStockHooks } from '@/hooks/watchlist_stock'
+import { stocklistHooks } from '@/hooks/stocklist'
 
 import type { StocklistDisplay } from '@/types/stock'
 import { stockSummaryUpdater } from '@/hooks/summary'
 import Summaries from '@/components/dashboard/Summaries'
-import { WatchlistHeader } from '@/components/watchlist/WatchlistHeader'
-import { StocklistTable } from '@/components/StocklistTable'
+import { StocklistHeader } from '@/components/stocklist/StocklistHeader'
+import { StocklistTable } from '@/components/stocklist/StocklistTable'
 import { useQuery } from '@tanstack/react-query'
 
 const Home = () => {
@@ -39,7 +39,7 @@ const Home = () => {
   const { data: watchlistStocks = [] } = useQuery<StocklistDisplay[]>({
     queryKey: ['watchlistPrices'], // when invalidated, this repolls 
     queryFn: async () => {
-      const response = await watchlistStockHooks.fetchWatchlist()
+      const response = await stocklistHooks.fetchStocklist({ stockType: "watchlist" })
       return response || []
     },
     staleTime: Infinity,
@@ -47,10 +47,10 @@ const Home = () => {
 
   // react query for cached summaryPrices
   const { data: summarylistStocks = [] } = useQuery<StocklistDisplay[]>({
-    queryKey: ['summaryPrices'],
+    queryKey: ['summarylistPrices'],
     queryFn: async () => {
-      // TODO: implement summaryPrices query function
-      return [];
+      const response = await stocklistHooks.fetchStocklist({ stockType: "summarylist" })
+      return response || []
     },
     staleTime: Infinity,
   })
@@ -70,19 +70,20 @@ const Home = () => {
     <div>
       {/* Content */}
       <section className="mx-auto max-w-7xl p-6">
-        <WatchlistHeader
-          watchlist={watchlistStocks}
+        <StocklistHeader
+          stocklist={summarylistStocks}
           isAdding={isAdding}
           setIsAdding={setIsAdding}
+          stockType="summarylist"
         />
         <StocklistTable
-          stockType={"watchlist"}
+          stockType={"summarylist"}
         />
         <Summaries
           summaryList={summarylist}
           isFetching={isGeneratingSummary}
           onFetchSummaries={fetchSummary}
-          disableFetch={watchlistStocks.length === 0} />
+          disableFetch={summarylistStocks.length === 0} />
       </section>
     </div>
   )
