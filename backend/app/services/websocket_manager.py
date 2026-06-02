@@ -64,7 +64,6 @@ class TickerConnectionManager:
         for ticker, clients in list(self.ticker_subscriptions.items()):
             if websocket in clients:
                 clients.remove(websocket)
-            # clean up empty keys to keep RAM footprint pristine
             if not clients:
                 del self.ticker_subscriptions[ticker]
 
@@ -80,7 +79,7 @@ class TickerConnectionManager:
             if have, then add the fresh ticker data into the ws payload
         3. fire up async tasks to broadcast to the connected ws
         """
-        # Temporary bucket mapping raw WebSocket instances to their tailored dictionary payloads
+
         client_payloads: Dict[WebSocket, Dict[str, dict]] = {}
 
         # go through fresh_data scraped
@@ -114,7 +113,6 @@ class TickerConnectionManager:
         try:
             await ws.send_json({"type": "PRICE_UPDATE", "data": payload})
         except Exception:
-            # If a network write fails, the connection is broken (laptop closed, etc.). Drop it immediately.
             self.disconnect(ws)
 
     async def _ping_proxy_heartbeat_loop(self):
@@ -134,5 +132,4 @@ class TickerConnectionManager:
                 )
 
 
-# Initialize the global shared in-memory instance
 ws_manager = TickerConnectionManager()

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { WatchlistStockDisplay } from '@/types/stock';
-import { useAuth } from '@/context/AuthContext'; // ──► Import your hook cleanly
+import { useAuth } from '@/context/AuthContext';
 
 interface Props {
   setWatchlist: React.Dispatch<React.SetStateAction<WatchlistStockDisplay[]>>;
