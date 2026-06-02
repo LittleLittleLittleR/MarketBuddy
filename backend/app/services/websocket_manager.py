@@ -99,6 +99,9 @@ class TickerConnectionManager:
         # mass broadcast over async task
         if client_payloads:
             logger.debug("[broadcast_targeted_updates] Starting Broadcasting...")
+            logger.debug(
+                f"[broadcast_targeted_updates] client payloads are: {client_payloads}"
+            )
             await asyncio.gather(
                 *[
                     self._send_tailored_json(client, payload)

@@ -14,3 +14,10 @@ export interface WatchlistStockDisplay {
   current_price: number | null;
   change_percent: number | null;
 }
+
+export interface RawWatchlistStock {
+  ticker: string;
+  company_name: string;
+  price: number | null;
+  opening_price: number | null;
+}

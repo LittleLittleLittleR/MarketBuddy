@@ -14,7 +14,6 @@ const LiveStockPriceUpdater = ({ setWatchlist, accessToken }: Props) => {
   const { user } = useAuth();
 
   useEffect(() => {
-    // Drop out early if no token is available yet from your auth provider context
     if (!accessToken || accessToken === "undefined") return
     const WS_URL = `ws://localhost:8000/ws/prices?token=${accessToken}`;
 

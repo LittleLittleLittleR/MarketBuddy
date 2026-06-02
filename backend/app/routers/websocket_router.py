@@ -10,7 +10,7 @@ from loguru import logger
 router = APIRouter()
 
 # TODO: REMOVE BEFORE COMMIT
-TESTING = True
+TESTING = False
 
 
 @router.websocket("/ws/prices")
@@ -55,12 +55,15 @@ async def websocket_prices_endpoint(websocket: WebSocket, token: str | None = No
 
             # pull the user's specific customized watch list tickers from your table
             portfolio_data = (
-                await supabase_client.table("user_portfolios")
-                .select("ticker")
+                await supabase_client.table("watchlist_stocks")
+                .select("*")
                 .eq("user_id", user_id)
                 .execute()
             )
-            user_tickers = [row["ticker"].upper() for row in portfolio_data.data]
+
+            logger.debug(f"[USER {user_id}]: {portfolio_data}")
+
+            user_tickers = [row["stock_ticker"].upper() for row in portfolio_data.data]
 
         except Exception as err:
             logger.error(f"[WS_AUTH_ERROR] Auth/Portfolio initialization failed: {err}")
