@@ -1,4 +1,4 @@
-import type { StocklistDisplay } from '@/types/stock'
+import type { PortfolioListDisplay, WatchlistStockDisplay } from '@/types/stock'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
@@ -17,11 +17,12 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { stocklistHooks } from '@/hooks/stocklist'
+import { watchlistHooks } from '@/hooks/watchlist'
 import { useRealtimePrice } from '@/context/RealtimePriceContext'
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert'
+import { portfolioHooks } from '@/hooks/portfolio'
 
-type SortKey = keyof StocklistDisplay
+type SortKey = keyof WatchlistStockDisplay
 
 type SortConfig = {
   key: SortKey | null
@@ -29,7 +30,7 @@ type SortConfig = {
 }
 
 type StocklistTableProps = {
-  stockType: 'watchlist' | 'portfolio' | 'summarylist'
+  stockType: 'watchlist' | 'portfolio';
 }
 
 export function StocklistTable({ stockType }: StocklistTableProps) {
@@ -41,15 +42,15 @@ export function StocklistTable({ stockType }: StocklistTableProps) {
     direction: null,
   })
 
-  const { data: rawStocklist = [], isLoading } = useQuery<StocklistDisplay[]>({
+  const { data: rawStocklist = [], isLoading } = useQuery({
     queryKey: [`${stockType}Prices`],
-    queryFn: async () => {
+    queryFn: async (): Promise<WatchlistStockDisplay[] | PortfolioListDisplay[]> => {
       if (stockType === 'watchlist') {
-        const response = await stocklistHooks.fetchStocklist({ stockType })
-        return response || []
-      } else if (stockType === 'summarylist') {
-        const response = await stocklistHooks.fetchStocklist({ stockType })
-        return response || []
+        const response = await watchlistHooks.fetchStocks()
+        return (response as WatchlistStockDisplay[]) || []
+      } else if (stockType === 'portfolio') {
+        const response = await portfolioHooks.fetchStocks()
+        return (response as PortfolioListDisplay[]) || []
       }
       return []
     },
@@ -58,14 +59,16 @@ export function StocklistTable({ stockType }: StocklistTableProps) {
 
   const deleteMutation = useMutation({
     mutationFn: async (ticker: string) => {
-      await stocklistHooks.deleteStock({ 
-        stockType, newTicker: ticker 
-      })
+      if (stockType === 'watchlist') {
+        await watchlistHooks.deleteStock(ticker);
+      } else if (stockType === 'portfolio') {
+        await portfolioHooks.deleteStock(ticker);
+      }
       return ticker
     },
     onSuccess: (deletedTicker) => {
-      queryClient.setQueryData([`${stockType}Prices`], (oldData: StocklistDisplay[] | undefined) => {
-        return oldData ? oldData.filter(stock => stock.ticker !== deletedTicker) : []
+      queryClient.setQueryData([`${stockType}Prices`], (oldData: WatchlistStockDisplay[] | PortfolioListDisplay[] | undefined) => {
+        return oldData ? oldData.filter(stock => ('ticker' in stock ? stock.ticker !== deletedTicker : true)) : []
       })
     },
     onError: (err) => {
@@ -182,10 +185,10 @@ export function StocklistTable({ stockType }: StocklistTableProps) {
               <TableRow>
                 {['ticker', 'company_name', 'current_price', 'change_percent'].map((field) => (
                   <TableHead key={field} className="w-1/4 text-center">
-                    <Button variant="ghost" onClick={() => handleSort(field as keyof StocklistDisplay)}>
+                    <Button variant="ghost" onClick={() => handleSort(field as keyof WatchlistStockDisplay)}>
                       <span className="capitalize">{field.replace('_', ' ')}</span>
                       <span className="ml-2 inline-block w-4 text-center">
-                        {getSortIndicator(field as keyof StocklistDisplay)}
+                        {getSortIndicator(field as keyof WatchlistStockDisplay)}
                       </span>
                     </Button>
                   </TableHead>

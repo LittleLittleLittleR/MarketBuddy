@@ -2,7 +2,7 @@ import { useState, type Dispatch, type SetStateAction } from 'react'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import type { StocklistDisplay } from '@/types/stock';
-import { stocklistHooks } from '@/hooks/stocklist';
+import { stocklistHooks } from '@/hooks/watchlist';
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 type StocklistHeaderProps = {
