@@ -1,4 +1,5 @@
 import sys
+
 from loguru import logger
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime, timezone
@@ -8,7 +9,7 @@ from fastapi import FastAPI
 from app.config import settings
 from app.dependencies.supabase_client import get_supabase
 from app.repositories.summary_repo import SummaryRepository
-from app.routers import analysis, tickers, websocket_router
+from app.routers import analysis, test, tickers, websocket_router, videos
 from app.services.stock_analysis import StockAnalysisService
 from app.services.ticker_worker import TickerScraperService
 from app.dependencies.redis_client import get_redis
@@ -175,6 +176,7 @@ async def on_the_dot_clock_scheduler():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    """
     minute_scheduler_task = asyncio.create_task(on_the_dot_clock_scheduler())
     daily_schedular_task = asyncio.create_task(daily_analysis_scheduler())
     logger.success("[LIFESPAN] Background schedulers are active")
@@ -187,11 +189,13 @@ async def lifespan(app: FastAPI):
         )
     except asyncio.CancelledError:
         logger.warning("[LIFESPAN] CancelledError")
-
+    """
     logger.success("[LIFESPAN] ALL Background scheduler successfully stopped.")
 
 
-app = FastAPI(lifespan=lifespan)
+# app = FastAPI(lifespan=lifespan)
+
+app = FastAPI()
 print(settings.ALLOWED_ORIGINS)
 app.add_middleware(
     CORSMiddleware,
@@ -203,6 +207,8 @@ app.add_middleware(
 app.include_router(analysis.router)
 app.include_router(tickers.router)
 app.include_router(websocket_router.router)
+app.include_router(videos.router)
+app.include_router(test.router)
 
 
 @app.get("/")

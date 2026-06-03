@@ -28,6 +28,12 @@ class Settings(BaseSettings):
     #   env_file = ".env"
     #
 
+    # S3 AWS
+    AWS_ACCESS_KEY_ID: str
+    AWS_SECRET_ACCESS_KEY: str
+    AWS_REGION: str
+    S3_BUCKET: str
+
     @field_validator("ALLOWED_ORIGINS", mode="before")
     @classmethod
     def parse_comma_separated_list(cls, v: any) -> list[str]:
@@ -45,3 +51,4 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+

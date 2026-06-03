@@ -1,0 +1,2 @@
+[hases.setup]
+aptPkgs = ["...", "ffmpeg", "fonts-dejavu-core"]
