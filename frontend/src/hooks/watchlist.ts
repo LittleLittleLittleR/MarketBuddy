@@ -52,8 +52,7 @@ const addStock = async (newTicker: string) => {
 
 const deleteStock = async (newTicker: string) => {
   try {
-    let watchlistData: StocklistResponse[] = []
-    watchlistData = await watchlistStockService.getMyWatchlistStocks()
+    const watchlistData: StocklistResponse[] = await watchlistStockService.getMyWatchlistStocks()
 
     const item = watchlistData.find(
       (s) => s.stock_ticker === newTicker

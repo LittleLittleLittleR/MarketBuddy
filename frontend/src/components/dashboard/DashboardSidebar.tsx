@@ -9,23 +9,33 @@ import {
 import { Button } from '@/components/ui/button'
 
 type PortfolioProps = {
-  portfolios: string[];
+  portfolios: string[]
+  selectedView: string
+  onSelectView: (view: string) => void
 }
 
-export function PortfolioSidebar({ portfolios }: PortfolioProps) {
+export function DashboardSidebar({ portfolios, selectedView, onSelectView }: PortfolioProps) {
   return (
-    <Sidebar>
+    <Sidebar collapsible="none" className="h-full rounded-lg border bg-background">
       <div className="flex h-full flex-col">
         {/* Scrollable section */}
         <SidebarContent className="flex-1 overflow-y-auto">
           <SidebarGroup>
             <SidebarGroupContent>
               <div className="space-y-2 p-2">
+                <Button
+                  variant={selectedView === 'watchlist' ? 'default' : 'ghost'}
+                  className="w-full justify-start"
+                  onClick={() => onSelectView('watchlist')}
+                >
+                  Watchlist
+                </Button>
                 {portfolios.map((portfolio) => (
                   <Button
                     key={portfolio}
-                    variant="ghost"
+                    variant={selectedView === portfolio ? 'default' : 'ghost'}
                     className="w-full justify-start"
+                    onClick={() => onSelectView(portfolio)}
                   >
                     {portfolio}
                   </Button>

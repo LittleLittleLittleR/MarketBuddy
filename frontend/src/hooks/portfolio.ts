@@ -19,7 +19,7 @@ const findStockInPortfolio = async (portfolioId: number, ticker: string) => {
     company_name: tradeStock[0].stocks.company_name,
     quantity: totalQuantity,
     average_price: averagePrice,
-    profit_loss: (tradeStock[0].stocks.current_price || 0) - averagePrice,
+    profit_loss: averagePrice - (tradeStock[0].stocks.current_price || 0),
     open_price: tradeStock[0].stocks.open_price,
     current_price: tradeStock[0].stocks.current_price,
   };
@@ -43,16 +43,7 @@ const fetchStocks = async () => {
   return portfoliolist
 }
 
-const addStock = async () => {
-  // TODO: implement
-}
-
-const deleteStock = async () => {
-  // TODO: implement
-}
 
 export const portfolioHooks = {
   fetchStocks,
-  addStock,
-  deleteStock,
 }

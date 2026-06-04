@@ -1,12 +1,12 @@
 import { useState, type Dispatch, type SetStateAction } from 'react'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import type { StocklistDisplay } from '@/types/stock';
-import { stocklistHooks } from '@/hooks/watchlist';
+import type { WatchlistStockDisplay } from '@/types/stock';
+import { watchlistHooks } from '@/hooks/watchlist';
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 type StocklistHeaderProps = {
-  stocklist: StocklistDisplay[];
+  stocklist: WatchlistStockDisplay[];
   isAdding: boolean
   setIsAdding: Dispatch<SetStateAction<boolean>>
   stockType: 'watchlist' | 'portfolio' | 'summarylist';
@@ -19,10 +19,7 @@ export function StocklistHeader({ stocklist, isAdding, setIsAdding, stockType }:
 
   const addStockMutation = useMutation({
     mutationFn: async (ticker: string) => {
-      await stocklistHooks.addStock({ 
-        stockType,
-        newTicker: ticker 
-      })
+      await watchlistHooks.addStock(ticker)
     },
     onMutate: () => {
       setIsAdding(true)
