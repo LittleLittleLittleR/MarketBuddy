@@ -32,7 +32,6 @@ const fetchStocks= async () => {
 }
 
 const addStock = async (newTicker: string) => {
-  console.log("Received stock to add: ", newTicker)
   try {
     if (!newTicker?.trim()) {
       return

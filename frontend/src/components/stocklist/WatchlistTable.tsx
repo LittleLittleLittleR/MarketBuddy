@@ -46,12 +46,41 @@ export function WatchlistTable({ stocks }: WatchlistTableProps) {
       await watchlistHooks.deleteStock(ticker);
       return ticker
     },
-    onSuccess: (deletedTicker) => {
-      queryClient.setQueryData([`WatchlistPrices`], (oldData: WatchlistStockDisplay[]) => {
-        return oldData ? oldData.filter(stock => (stock.ticker !== deletedTicker ? true : false)) : []
+    onMutate: async (tickerToDelete) => {
+      await queryClient.cancelQueries({
+        queryKey: ['watchlistPrices'],
+      })
+
+      const previousWatchlist = queryClient.getQueryData<WatchlistStockDisplay[]>(['watchlistPrices'])
+
+      queryClient.setQueryData(
+        ['watchlistPrices'],
+        (oldData: WatchlistStockDisplay[] | undefined) => {
+          return oldData
+            ? oldData.filter(stock => stock.ticker !== tickerToDelete)
+            : []
+        }
+      )
+
+      return { previousWatchlist }
+    },
+    onSuccess: async (deletedTicker) => {
+      queryClient.setQueryData(
+        ['watchlistPrices'],
+        (oldData: WatchlistStockDisplay[] | undefined) => {
+          return oldData
+            ? oldData.filter(stock => stock.ticker !== deletedTicker)
+            : []
+        }
+      )
+      await queryClient.invalidateQueries({
+        queryKey: ['watchlistPrices'],
       })
     },
-    onError: (err: unknown) => {
+    onError: (err: unknown, _ticker, context) => {
+      if (context?.previousWatchlist) {
+        queryClient.setQueryData(['watchlistPrices'], context.previousWatchlist)
+      }
       console.error("Failed during delete operation for ticker: ", err)
     }
   })
