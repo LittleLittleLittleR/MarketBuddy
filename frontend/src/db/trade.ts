@@ -21,6 +21,30 @@ const getTradesByPortfolio = async (portfolioId: number) => {
   return data;
 };
 
+const getTradesWithStockInfoByPortfolio = async (portfolioId: number, ticker: string) => {
+  await dbAuth.checkPortfolioAuth(portfolioId);
+
+  const { data, error } = await supabase.from('trades')
+    .select(`
+      *,
+      stocks (
+        ticker,
+        company_name,
+        current_price,
+        open_price
+      )
+    `)
+    .eq('portfolio_id', portfolioId)
+    .eq('stocks.ticker', ticker)
+    .order('trade_date', { ascending: false });
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+};
+
 const getTradeById = async (tradeId: number) => {
   await dbAuth.checkTradeAuth(tradeId);
 
@@ -96,4 +120,5 @@ export const tradeService = {
   createTrade,
   updateTrade,
   deleteTrade,
+  getTradesWithStockInfoByPortfolio,
 };

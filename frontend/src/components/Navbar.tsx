@@ -10,9 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
-type Props = {}
-
-export default function Navbar(props: Props) {
+export default function Navbar() {
   const [userEmail, setUserEmail] = useState('')
   // const [username, setUsername] = useState('')
   const [isLoading, setIsLoading] = useState(true)

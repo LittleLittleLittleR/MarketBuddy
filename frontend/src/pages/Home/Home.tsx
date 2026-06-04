@@ -1,23 +1,28 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 
 import { supabase } from '@/lib/supabase'
-import { stocklistHooks } from '@/hooks/stocklist'
-import { stockSummaryUpdater } from '@/hooks/summary'
+import { watchlistHooks } from '@/hooks/watchlist'
+import type { WatchlistStockDisplay, PortfolioListDisplay } from '@/types/stock'
 
-import type { StocklistDisplay } from '@/types/stock'
-
+import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar'
 import Summaries from '@/components/dashboard/Summaries'
 import { StocklistHeader } from '@/components/stocklist/StocklistHeader'
-import { StocklistTable } from '@/components/stocklist/StocklistTable'
+import { WatchlistTable } from '@/components/stocklist/WatchlistTable'
+import { PortfoliolistTable } from '@/components/stocklist/PortfoliolistTable'
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { SidebarProvider } from '@/components/ui/sidebar'
+import { portfolioHooks } from '@/hooks/portfolio'
+import { stockSummaryUpdater } from '@/hooks/summary'
 
 const Home = () => {
   const [isAdding, setIsAdding] = useState(false)
-  const [summarylist, setSummarylist] = useState<string[]>([])
-  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false)
+  const [selectedView, setSelectedView] = useState<string>('watchlist')
+  const [activeTab, setActiveTab] = useState('dashboard')
+  const [summaryList, setSummaryList] = useState<string[]>([])
+  const [isFetchingSummaries, setIsFetchingSummaries] = useState(false)
 
   const navigate = useNavigate()
 
@@ -38,80 +43,99 @@ const Home = () => {
   }, [navigate])
 
   // watchlist
-  const { data: watchlistStocks = [] } = useQuery<StocklistDisplay[]>({
+  const { data: watchlistStocks = [] } = useQuery<WatchlistStockDisplay[]>({
     queryKey: ['watchlistPrices'],
     queryFn: async () => {
-      const res = await stocklistHooks.fetchStocklist({ stockType: 'watchlist' })
+      const res = await watchlistHooks.fetchStocks()
       return res || []
     },
     staleTime: Infinity,
   })
 
-  // summarylist
-  const { data: summarylistStocks = [] } = useQuery<StocklistDisplay[]>({
-    queryKey: ['summarylistPrices'],
+  // portfolio
+  const { data: portfolios = [] } = useQuery<PortfolioListDisplay[]>({
+    queryKey: ['portfolioPrices'],
     queryFn: async () => {
-      const res = await stocklistHooks.fetchStocklist({ stockType: 'summarylist' })
+      const res = await portfolioHooks.fetchStocks()
       return res || []
     },
     staleTime: Infinity,
   })
 
-  const fetchSummary = async () => {
+  const selectedPortfolio = portfolios.find((portfolio) => portfolio.name === selectedView)
+
+  const fetchSummaries = useCallback(async () => {
+    setIsFetchingSummaries(true)
+
     try {
-      setIsGeneratingSummary(true)
-      await stockSummaryUpdater({ setSummarylist })
-    } catch (error) {
-      console.error('Failed to fetch summaries:', error)
+      await stockSummaryUpdater({ setSummarylist: setSummaryList })
     } finally {
-      setIsGeneratingSummary(false)
+      setIsFetchingSummaries(false)
+    }
+  }, [])
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value)
+
+    if (value === 'feed' && summaryList.length === 0 && !isFetchingSummaries) {
+      void fetchSummaries()
     }
   }
 
   return (
     <div className="mx-auto max-w-7xl p-6">
-      <Tabs defaultValue="summarylist" className="w-full">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
 
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="summarylist">Summary</TabsTrigger>
-          <TabsTrigger value="watchlist">Watchlist</TabsTrigger>
-          <TabsTrigger value="profiles">Portfolios</TabsTrigger>
+          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+          <TabsTrigger value="feed">Feed</TabsTrigger>
+          <TabsTrigger value="videos">Videos</TabsTrigger>
         </TabsList>
 
-        {/* SUMMARYLIST */}
-        <TabsContent value="summarylist" className="space-y-6">
-          <StocklistHeader
-            stocklist={summarylistStocks}
-            isAdding={isAdding}
-            setIsAdding={setIsAdding}
-            stockType="summarylist"
-          />
+        {/* DASHBOARD */}
+        <TabsContent value="dashboard" className="space-y-6">
+          <SidebarProvider>
+            <div className="grid gap-6 lg:grid-cols-[240px_minmax(0,1fr)]">
+              <DashboardSidebar
+                portfolios={portfolios.map((portfolio) => portfolio.name)}
+                selectedView={selectedView}
+                onSelectView={setSelectedView}
+              />
 
-          <StocklistTable stockType="summarylist" />
+              <div className="space-y-6">
+                {selectedView === 'watchlist' && (
+                  <>
+                    <StocklistHeader
+                      stocklist={watchlistStocks}
+                      isAdding={isAdding}
+                      setIsAdding={setIsAdding}
+                      stockType="watchlist"
+                    />
+                    <WatchlistTable stocks={watchlistStocks} />
+                  </>
+                )}
 
+                {selectedView !== 'watchlist' && selectedPortfolio && (
+                  <PortfoliolistTable portfolio={selectedPortfolio} />
+                )}
+              </div>
+            </div>
+          </SidebarProvider>
+        </TabsContent>
+
+        {/* FEED */}
+        <TabsContent value="feed" className="text-muted-foreground">
           <Summaries
-            summaryList={summarylist}
-            isFetching={isGeneratingSummary}
-            onFetchSummaries={fetchSummary}
-            disableFetch={summarylistStocks.length === 0}
+            summaryList={summaryList}
+            isFetching={isFetchingSummaries}
+            onFetchSummaries={fetchSummaries}
+            disableFetch={isFetchingSummaries}
           />
         </TabsContent>
 
-        {/* WATCHLIST */}
-        <TabsContent value="watchlist" className="text-muted-foreground">
-          <StocklistHeader
-            stocklist={watchlistStocks}
-            isAdding={isAdding}
-            setIsAdding={setIsAdding}
-            stockType="watchlist"
-          />
-
-          <StocklistTable stockType="watchlist" />
-        </TabsContent>
-
-        {/* PORTFOLIOS */}
-        <TabsContent value="profiles" className="text-muted-foreground">
-          Portfolios coming soon.
+        {/* VIDEOS */}
+        <TabsContent value="videos" className="text-muted-foreground">
+          videos coming soon...
         </TabsContent>
 
       </Tabs>
