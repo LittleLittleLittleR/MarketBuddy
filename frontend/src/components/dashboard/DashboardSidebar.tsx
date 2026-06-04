@@ -16,7 +16,7 @@ type PortfolioProps = {
 
 export function DashboardSidebar({ portfolios, selectedView, onSelectView }: PortfolioProps) {
   return (
-    <Sidebar collapsible="none" className="h-full rounded-lg border bg-background">
+    <Sidebar collapsible="none" className="h-full rounded-lg border bg-background max-h-[80vh]">
       <div className="flex h-full flex-col">
         {/* Scrollable section */}
         <SidebarContent className="flex-1 overflow-y-auto">
