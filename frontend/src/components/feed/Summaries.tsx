@@ -2,13 +2,14 @@ import { Button } from "../ui/button";
 import { Card, CardContent } from "../ui/card";
 
 type Props = {
-  summaryList: string[];
+  summaries: string[];
   isFetching: boolean;
-  onFetchSummaries: () => Promise<void>
+  onFetchSummaries: () => Promise<void>;
   disableFetch: boolean;
-}
+};
 
-const Summaries = ({ summaryList, isFetching, onFetchSummaries, disableFetch }: Props) => {
+const Summaries = ({ summaries, isFetching, onFetchSummaries, disableFetch }: Props) => {
+
   return (
     <div className="mt-8 whitespace-pre-line text-gray-300">
       <div className="mb-4 flex items-center justify-between">
@@ -26,13 +27,11 @@ const Summaries = ({ summaryList, isFetching, onFetchSummaries, disableFetch }: 
           onClick={onFetchSummaries}
           disabled={isFetching || disableFetch}
         >
-          {isFetching
-            ? 'Generating...'
-            : 'Generate Summary'}
+          {isFetching ? "Generating..." : "Generate Summary"}
         </Button>
       </div>
 
-      {summaryList.length === 0 ? (
+      {summaries.length === 0 ? (
         <Card>
           <CardContent className="flex items-center justify-center py-10">
             <p className="text-muted-foreground">
@@ -42,7 +41,7 @@ const Summaries = ({ summaryList, isFetching, onFetchSummaries, disableFetch }: 
         </Card>
       ) : (
         <div className="space-y-4">
-          {summaryList.map((summary, index) => (
+          {summaries.map((summary, index) => (
             <Card
               key={index}
               className="transition-shadow hover:shadow-md"
@@ -60,8 +59,8 @@ const Summaries = ({ summaryList, isFetching, onFetchSummaries, disableFetch }: 
                   className="prose prose-sm max-w-none dark:prose-invert"
                   dangerouslySetInnerHTML={{
                     __html: summary
-                      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                      .replace(/\n/g, '<br />')
+                      .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+                      .replace(/\n/g, "<br />"),
                   }}
                 />
               </CardContent>
@@ -71,7 +70,7 @@ const Summaries = ({ summaryList, isFetching, onFetchSummaries, disableFetch }: 
       )}
     </div>
 
-  )
-}
+  );
+};
 
 export default Summaries;

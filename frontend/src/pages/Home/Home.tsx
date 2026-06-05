@@ -7,10 +7,10 @@ import { watchlistHooks } from '@/hooks/watchlist'
 import type { WatchlistStockDisplay, PortfolioListDisplay } from '@/types/stock'
 
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar'
-import Summaries from '@/components/dashboard/Summaries'
-import { StocklistHeader } from '@/components/stocklist/StocklistHeader'
-import { WatchlistTable } from '@/components/stocklist/WatchlistTable'
-import { PortfoliolistTable } from '@/components/stocklist/PortfoliolistTable'
+import Summaries from '@/components/feed/Summaries'
+import { StocklistHeader } from '@/components/dashboard/StocklistHeader'
+import { WatchlistTable } from '@/components/dashboard/WatchlistTable'
+import { PortfoliolistTable } from '@/components/dashboard/PortfoliolistTable'
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { SidebarProvider } from '@/components/ui/sidebar'
@@ -126,7 +126,7 @@ const Home = () => {
         {/* FEED */}
         <TabsContent value="feed" className="text-muted-foreground">
           <Summaries
-            summaryList={summaryList}
+            summaries={summaryList}
             isFetching={isFetchingSummaries}
             onFetchSummaries={fetchSummaries}
             disableFetch={isFetchingSummaries}
