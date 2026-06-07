@@ -1,7 +1,6 @@
 import asyncio
 import traceback
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import InstanceOf
+from fastapi import APIRouter, Depends
 from app.config import settings
 from app.dependencies.auth import get_current_user
 from app.services.stock_analysis import StockAnalysisService
@@ -20,7 +19,7 @@ async def analyse_stocks(
     current_user=Depends(get_current_user),
 ):  # takes in a list containing stocks required to scrape and summarise
     logger.success(
-        f"[ANALYSE-STOCKS] Received request from {current_user.get("email")}"
+        f"[ANALYSE-STOCKS] Received request from {current_user.get('email')}"
     )
 
     start = perf_counter()

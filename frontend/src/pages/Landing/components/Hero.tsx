@@ -2,9 +2,8 @@ import { Button } from "@/components/ui/button"
 import { Bell, TrendingUp, Zap } from "lucide-react"
 import { Link } from "react-router-dom"
 
-type Props = {}
 
-const Hero = (props: Props) => {
+const Hero = () => {
   return (
     <main className="flex-1 flex flex-col items-center justify-center px-6 py-8">
       <div className="max-w-2xl text-center space-y-6">
