@@ -30,7 +30,7 @@ jobs:
           python -m pytest -q
 
       - name: Install Railway CLI
-        run: npm install -g @railway/cli
+        run: curl -fsSL https://install.railway.app | sh
 
       - name: Deploy to Railway
         if: github.ref == 'refs/heads/main'
@@ -38,3 +38,4 @@ jobs:
         run: railway up --detach --service "Orbital FastAPI Backend"
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        
