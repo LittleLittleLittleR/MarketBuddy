@@ -27,6 +27,11 @@ export const RealtimePriceProvider = ({ children }: { children: React.ReactNode 
   const { session } = useAuth();
 
   const [status, setStatus] = useState<ConnectionStatus>('connecting');
+  const displayStatus = session?.access_token
+    ? status === 'disconnected'
+      ? 'connecting'
+      : status
+    : 'disconnected';
 
   useEffect(() => {
     if (status === 'connected') {
@@ -50,14 +55,13 @@ export const RealtimePriceProvider = ({ children }: { children: React.ReactNode 
 
   useEffect(() => {
     if (!session?.access_token) {
-      setStatus("disconnected");
+      if (rwsRef.current) {
+        rwsRef.current.close();
+      }
       return;
-    };
+    }
 
-    setStatus("connecting")
-
-    
-    const WS_URL = `wss://orbital-fastapi-backend-production.up.railway.app/ws/prices?token=${session?.access_token}`
+    const WS_URL = `wss://orbital-fastapi-backend-production.up.railway.app/ws/prices?token=${session.access_token}`
     const rws = new ReconnectingWebSocket(WS_URL, [], {
       maxReconnectionDelay: 20000, // Caps exponential backoff at 10 seconds max
       minReconnectionDelay: 5000,  // Starts retrying after 5 second if connection drops
@@ -68,7 +72,7 @@ export const RealtimePriceProvider = ({ children }: { children: React.ReactNode 
     rwsRef.current = rws;
 
     rws.onopen = () => {
-      setStatus("connected")
+      setStatus('connected')
       console.log('[RWS] Client WS connected.')
     };
 
@@ -127,7 +131,7 @@ export const RealtimePriceProvider = ({ children }: { children: React.ReactNode 
 
             return oldData.map((portfolio) => ({
               ...portfolio,
-              stocks: portfolio.stocks.map((stock: any) => {
+              stocks: portfolio.stocks.map((stock) => {
                 const liveUpdate = incomingPrices[stock.ticker.toUpperCase()];
 
                 if (!liveUpdate) {
@@ -164,7 +168,7 @@ export const RealtimePriceProvider = ({ children }: { children: React.ReactNode 
   };
 
   return (
-    <RealtimePriceContext.Provider value={{ status, subscribeToTicker }}>
+    <RealtimePriceContext.Provider value={{ status: displayStatus, subscribeToTicker }}>
       {children}
     </RealtimePriceContext.Provider>
   );

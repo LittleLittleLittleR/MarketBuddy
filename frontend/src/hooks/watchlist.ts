@@ -3,9 +3,7 @@ import { watchlistStockService } from "@/db/watchlist_stock"
 import type { StockResponse, StocklistResponse, WatchlistStockDisplay } from "@/types/stock"
 
 const fetchStocks= async () => {
-  let watchlistData: StocklistResponse[] = []
-
-  watchlistData = await watchlistStockService.getMyWatchlistStocks()
+  const watchlistData: StocklistResponse[] = await watchlistStockService.getMyWatchlistStocks()
 
   const watchlist: WatchlistStockDisplay[] = []
 
