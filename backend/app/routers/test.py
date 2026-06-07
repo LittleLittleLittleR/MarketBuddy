@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from app.services.websocket_manager import ws_manager
 
 router = APIRouter(prefix="/api/test", tags=["dev-testing"])

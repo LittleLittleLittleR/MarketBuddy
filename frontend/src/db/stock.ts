@@ -69,7 +69,9 @@ const getStocksByPortfolio = async (portfolioId: number) => {
         if (error) {
           throw error;
         }
-        return (tradeData ?? []).map((item: any) => item.ticker).filter(Boolean);
+        return (tradeData ?? [])
+          .map((item: { ticker: string | null }) => item.ticker)
+          .filter((ticker): ticker is string => Boolean(ticker));
       })())
     .order('ticker', { ascending: true });
 

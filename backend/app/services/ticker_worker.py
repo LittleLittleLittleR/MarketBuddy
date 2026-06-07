@@ -3,7 +3,6 @@ import asyncio
 import yfinance as yf
 import json
 import pandas as pd
-from datetime import datetime, timezone
 from upstash_redis.asyncio import Redis
 from loguru import logger
 
