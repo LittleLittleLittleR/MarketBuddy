@@ -30,8 +30,8 @@ jobs:
           python -m pytest -q
 
       - name: Install Railway CLI
-        run: curl -fsSL https://install.railway.app | bash
-
+        run: npm install -g @railway/cli  
+        
       - name: Deploy to Railway
         if: github.ref == 'refs/heads/main'
         working-directory: ./backend
