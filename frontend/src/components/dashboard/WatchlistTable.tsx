@@ -1,4 +1,4 @@
-import type { StocklistDisplay } from '@/types/stock'
+import type { WatchlistStockDisplay } from '@/types/stock'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
@@ -16,23 +16,23 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useMemo, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { stocklistHooks } from '@/hooks/stocklist'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { watchlistHooks } from '@/hooks/watchlist'
 import { useRealtimePrice } from '@/context/RealtimePriceContext'
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert'
 
-type SortKey = keyof StocklistDisplay
+type SortKey = keyof WatchlistStockDisplay
 
 type SortConfig = {
   key: SortKey | null
   direction: 'asc' | 'desc' | null
 }
 
-type StocklistTableProps = {
-  stockType: 'watchlist' | 'portfolio' | 'summarylist'
+type WatchlistTableProps = {
+  stocks: WatchlistStockDisplay[]
 }
 
-export function StocklistTable({ stockType }: StocklistTableProps) {
+export function WatchlistTable({ stocks }: WatchlistTableProps) {
   const { status } = useRealtimePrice();
   const queryClient = useQueryClient();
 
@@ -41,51 +41,49 @@ export function StocklistTable({ stockType }: StocklistTableProps) {
     direction: null,
   })
 
-  const { data: rawStocklist = [], isLoading } = useQuery<StocklistDisplay[]>({
-    queryKey: [`${stockType}Prices`],
-    queryFn: async () => {
-      if (stockType === 'watchlist') {
-        const response = await stocklistHooks.fetchStocklist({ stockType })
-        return response || []
-      } else if (stockType === 'summarylist') {
-        const response = await stocklistHooks.fetchStocklist({ stockType })
-        return response || []
-      }
-      return []
-    },
-    staleTime: Infinity,
-  })
-
   const deleteMutation = useMutation({
     mutationFn: async (ticker: string) => {
-      await stocklistHooks.deleteStock({ 
-        stockType, newTicker: ticker 
-      })
+      await watchlistHooks.deleteStock(ticker);
       return ticker
     },
-    onSuccess: (deletedTicker) => {
-      queryClient.setQueryData([`${stockType}Prices`], (oldData: StocklistDisplay[] | undefined) => {
-        return oldData ? oldData.filter(stock => stock.ticker !== deletedTicker) : []
+    onMutate: async (tickerToDelete) => {
+      await queryClient.cancelQueries({
+        queryKey: ['watchlistPrices'],
+      })
+
+      const previousWatchlist = queryClient.getQueryData<WatchlistStockDisplay[]>(['watchlistPrices'])
+
+      queryClient.setQueryData(
+        ['watchlistPrices'],
+        (oldData: WatchlistStockDisplay[] | undefined) => {
+          return oldData
+            ? oldData.filter(stock => stock.ticker !== tickerToDelete)
+            : []
+        }
+      )
+
+      return { previousWatchlist }
+    },
+    onSuccess: async (deletedTicker) => {
+      queryClient.setQueryData(
+        ['watchlistPrices'],
+        (oldData: WatchlistStockDisplay[] | undefined) => {
+          return oldData
+            ? oldData.filter(stock => stock.ticker !== deletedTicker)
+            : []
+        }
+      )
+      await queryClient.invalidateQueries({
+        queryKey: ['watchlistPrices'],
       })
     },
-    onError: (err) => {
+    onError: (err: unknown, _ticker, context) => {
+      if (context?.previousWatchlist) {
+        queryClient.setQueryData(['watchlistPrices'], context.previousWatchlist)
+      }
       console.error("Failed during delete operation for ticker: ", err)
     }
   })
-
-  const watchlist = useMemo(() => {
-    return rawStocklist.map((stock) => {
-      const price = (stock).current_price ?? stock.current_price ?? 0
-
-      return {
-        ...stock,
-        current_price: price,
-        change_percent: stock.change_percent
-      }
-    })
-  }, [rawStocklist])
-
-
 
   const handleSort = (key: SortKey) => {
     setSortConfig((prev) => {
@@ -120,10 +118,10 @@ export function StocklistTable({ stockType }: StocklistTableProps) {
 
   const sortedData = useMemo(() => {
     if (!sortConfig.key || !sortConfig.direction) {
-      return watchlist
+      return stocks
     }
 
-    const sorted = [...watchlist].sort((a, b) => {
+    const sorted = [...stocks].sort((a, b) => {
       const aValue = a[sortConfig.key!]
       const bValue = b[sortConfig.key!]
 
@@ -139,7 +137,7 @@ export function StocklistTable({ stockType }: StocklistTableProps) {
     })
 
     return sorted
-  }, [watchlist, sortConfig])
+  }, [stocks, sortConfig])
 
   const getSortIndicator = (key: SortKey) => {
     if (sortConfig.key !== key) return '↕'
@@ -149,9 +147,7 @@ export function StocklistTable({ stockType }: StocklistTableProps) {
 
     return '↕'
   }
-  if (isLoading) {
-    return <div className="text-center p-12 text-muted-foreground animate-pulse text-sm">Loading your watchlist...</div>
-  }
+  
   return (
     <div>
       {status === 'connecting' && (
@@ -182,10 +178,10 @@ export function StocklistTable({ stockType }: StocklistTableProps) {
               <TableRow>
                 {['ticker', 'company_name', 'current_price', 'change_percent'].map((field) => (
                   <TableHead key={field} className="w-1/4 text-center">
-                    <Button variant="ghost" onClick={() => handleSort(field as keyof StocklistDisplay)}>
+                    <Button variant="ghost" onClick={() => handleSort(field as keyof WatchlistStockDisplay)}>
                       <span className="capitalize">{field.replace('_', ' ')}</span>
                       <span className="ml-2 inline-block w-4 text-center">
-                        {getSortIndicator(field as keyof StocklistDisplay)}
+                        {getSortIndicator(field as keyof WatchlistStockDisplay)}
                       </span>
                     </Button>
                   </TableHead>

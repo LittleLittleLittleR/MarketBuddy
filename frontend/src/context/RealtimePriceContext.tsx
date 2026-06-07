@@ -3,6 +3,7 @@ import ReconnectingWebSocket from 'reconnecting-websocket';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
+import type { PortfolioListDisplay, WatchlistStockDisplay } from '@/types/stock';
 
 type ConnectionStatus = 'connecting' | 'connected' | 'error' | 'disconnected';
 
@@ -11,7 +12,12 @@ interface RealtimePriceContextType {
   subscribeToTicker: (ticker: string) => void;
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+type LivePriceUpdate = {
+  price: number;
+  opening_price: number | null;
+};
+
+type LivePricePayload = Record<string, LivePriceUpdate | string>;
 
 const RealtimePriceContext = createContext<RealtimePriceContextType | null>(null);
 
@@ -21,6 +27,11 @@ export const RealtimePriceProvider = ({ children }: { children: React.ReactNode 
   const { session } = useAuth();
 
   const [status, setStatus] = useState<ConnectionStatus>('connecting');
+  const displayStatus = session?.access_token
+    ? status === 'disconnected'
+      ? 'connecting'
+      : status
+    : 'disconnected';
 
   useEffect(() => {
     if (status === 'connected') {
@@ -44,14 +55,13 @@ export const RealtimePriceProvider = ({ children }: { children: React.ReactNode 
 
   useEffect(() => {
     if (!session?.access_token) {
-      setStatus("disconnected");
+      if (rwsRef.current) {
+        rwsRef.current.close();
+      }
       return;
-    };
+    }
 
-    setStatus("connecting")
-
-    
-    const WS_URL = `wss://orbital-fastapi-backend-production.up.railway.app/ws/prices?token=${session?.access_token}`
+    const WS_URL = `wss://orbital-fastapi-backend-production.up.railway.app/ws/prices?token=${session.access_token}`
     const rws = new ReconnectingWebSocket(WS_URL, [], {
       maxReconnectionDelay: 20000, // Caps exponential backoff at 10 seconds max
       minReconnectionDelay: 5000,  // Starts retrying after 5 second if connection drops
@@ -62,7 +72,7 @@ export const RealtimePriceProvider = ({ children }: { children: React.ReactNode 
     rwsRef.current = rws;
 
     rws.onopen = () => {
-      setStatus("connected")
+      setStatus('connected')
       console.log('[RWS] Client WS connected.')
     };
 
@@ -87,7 +97,7 @@ export const RealtimePriceProvider = ({ children }: { children: React.ReactNode 
         const payload = JSON.parse(event.data);
 
         if (payload.type === 'PRICE_UPDATE' && payload.data) {
-          const incomingPrices = payload.data;
+          const incomingPrices: LivePricePayload = payload.data;
           // eg of payload
           // {'ticker': {
           //     'price': float,
@@ -98,21 +108,45 @@ export const RealtimePriceProvider = ({ children }: { children: React.ReactNode 
           //  }
 
           // updates into TanStack Query's Cache
-          queryClient.setQueryData(['watchlistPrices'], (oldData: any) => {
+          queryClient.setQueryData<WatchlistStockDisplay[]>(['watchlistPrices'], (oldData) => {
             if (!oldData) return oldData;
-            console.log("oldData: ", oldData)
 
-            return oldData.map((stock: any) => {
+            return oldData.map((stock) => {
               const liveUpdate = incomingPrices[stock.ticker.toUpperCase()];
               if (liveUpdate) {
+                const normalizedUpdate = typeof liveUpdate === 'string' ? JSON.parse(liveUpdate) : liveUpdate;
+
                 return {
                   ...stock,
-                  price: typeof liveUpdate === 'string' ? JSON.parse(liveUpdate).price : liveUpdate.price,
-                  opening_price: typeof liveUpdate === 'string' ? JSON.parse(liveUpdate).opening_price : liveUpdate.opening_price,
+                  current_price: normalizedUpdate.price,
+                  open_price: normalizedUpdate.opening_price,
                 };
               }
               return stock;
             });
+          });
+
+          queryClient.setQueryData<PortfolioListDisplay[]>(['portfolioPrices'], (oldData) => {
+            if (!oldData) return oldData;
+
+            return oldData.map((portfolio) => ({
+              ...portfolio,
+              stocks: portfolio.stocks.map((stock) => {
+                const liveUpdate = incomingPrices[stock.ticker.toUpperCase()];
+
+                if (!liveUpdate) {
+                  return stock;
+                }
+
+                const normalizedUpdate = typeof liveUpdate === 'string' ? JSON.parse(liveUpdate) : liveUpdate;
+
+                return {
+                  ...stock,
+                  current_price: normalizedUpdate.price,
+                  open_price: normalizedUpdate.opening_price,
+                };
+              }),
+            }));
           });
         }
       } catch (err) {
@@ -134,7 +168,7 @@ export const RealtimePriceProvider = ({ children }: { children: React.ReactNode 
   };
 
   return (
-    <RealtimePriceContext.Provider value={{ status, subscribeToTicker }}>
+    <RealtimePriceContext.Provider value={{ status: displayStatus, subscribeToTicker }}>
       {children}
     </RealtimePriceContext.Provider>
   );

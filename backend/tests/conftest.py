@@ -11,4 +11,3 @@ os.environ["AWS_ACCESS_KEY_ID"] = "test-access-key"
 os.environ["AWS_SECRET_ACCESS_KEY"] = "test-secret-key"
 os.environ["AWS_REGION"] = "ap-south-1"
 os.environ["S3_BUCKET"] = "test-bucket"
-
