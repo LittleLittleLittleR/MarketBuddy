@@ -1,4 +1,5 @@
 import sys
+
 from loguru import logger
 from fastapi.middleware.cors import CORSMiddleware
 import asyncio
@@ -7,12 +8,13 @@ from fastapi import FastAPI
 from app.config import settings
 from app.dependencies.supabase_client import get_supabase
 from app.repositories.summary_repo import SummaryRepository
-from app.routers import analysis, tickers, websocket_router
+from app.routers import analysis, test, tickers, websocket_router, videos
 from app.services.stock_analysis import StockAnalysisService
 from app.services.ticker_worker import TickerScraperService
 from app.dependencies.redis_client import get_redis
 from app.utils.time_utils import get_time_to_6am, is_market_open, sg_time_now
 from app.services.websocket_manager import ws_manager
+from app.services.video_builder import batch_fetch_chart_data
 
 logger.remove()
 
@@ -81,6 +83,7 @@ async def daily_analysis_scheduler():
                 logger.info(
                     f"[DAILY_SCHEDULER] Processing chunk {index + 1}/{len(chunks)}: {chunk}"
                 )
+                chart_data = await batch_fetch_chart_data(chunk)
 
                 async def analyse_one(ticker: str):
                     try:
@@ -90,8 +93,11 @@ async def daily_analysis_scheduler():
                         context = "\n".join(
                             [f"[{a.title}: {a.snippet}]" for a in links]
                         )
-                        return await analysis_service.scrape_and_summarise(
-                            ticker, context
+                        await analysis_service.scrape_and_summarise(ticker, context)
+                        await analysis_service.generate_daily_video(
+                            ticker,
+                            context,
+                            prefetched=chart_data.get(ticker.upper()),
                         )
                     except Exception as err:
                         logger.exception(
@@ -186,11 +192,11 @@ async def lifespan(app: FastAPI):
         )
     except asyncio.CancelledError:
         logger.warning("[LIFESPAN] CancelledError")
-
     logger.success("[LIFESPAN] ALL Background scheduler successfully stopped.")
 
 
 app = FastAPI(lifespan=lifespan)
+
 print(settings.ALLOWED_ORIGINS)
 app.add_middleware(
     CORSMiddleware,
@@ -202,6 +208,8 @@ app.add_middleware(
 app.include_router(analysis.router)
 app.include_router(tickers.router)
 app.include_router(websocket_router.router)
+app.include_router(videos.router)
+app.include_router(test.router)
 
 
 @app.get("/")
