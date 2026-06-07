@@ -6,7 +6,7 @@ from io import BytesIO
 from pathlib import Path
 import json
 from datetime import date as date_type
-
+import pandas as pd
 import yfinance as yf
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.figure import Figure
@@ -280,6 +280,79 @@ def _build_chart_scene(
     return buf.getvalue()
 
 
+async def batch_fetch_chart_data(tickers: list[str]) -> dict[str, dict]:
+    if not tickers:
+        return {}
+
+    def _pull():
+        t_str = " ".join(tickers)
+        kwargs = dict(group_by="ticker", progress=False, auto_adjust=True)
+        d5m = yf.download(t_str, period="5d", interval="5m", **kwargs)
+        d1h = yf.download(t_str, period="5d", interval="1h", **kwargs)
+        return d5m, d1h
+
+    result = {}
+    try:
+        d5m, d1h = await asyncio.to_thread(_pull)
+        is_multi = isinstance(d5m.columns, pd.MultiIndex)  # True when >1 ticker
+
+        for ticker in tickers:
+            t = ticker.upper()
+            empty = {
+                "open": None,
+                "high": None,
+                "low": None,
+                "close": None,
+                "change_pct": None,
+                "chart_1d": None,
+                "chart_5d": None,
+                "trading_date": None,
+                "chart_1d_date": None,
+                "chart_5d_range": None,
+            }
+            try:
+                c5m = d5m[t] if is_multi else d5m
+                c1h = d1h[t] if is_multi else d1h
+                entry = {**empty}
+
+                if not c5m.empty:
+                    last_date = c5m.index[-1].date()
+                    day_bars = c5m[c5m.index.date == last_date]
+                    if not day_bars.empty:
+                        entry["chart_1d"] = day_bars
+                        entry["chart_1d_date"] = last_date
+                        entry["trading_date"] = last_date
+                        entry["open"] = float(day_bars["Open"].iloc[0])
+                        entry["close"] = float(day_bars["Close"].iloc[-1])
+                        entry["high"] = float(day_bars["High"].max())
+                        entry["low"] = float(day_bars["Low"].min())
+                        if entry["open"] and entry["open"] > 0:
+                            entry["change_pct"] = round(
+                                (entry["close"] - entry["open"]) / entry["open"] * 100,
+                                2,
+                            )
+
+                # 1h bars → week chart
+                if not c1h.empty:
+                    entry["chart_5d"] = c1h
+                    first, last = c1h.index[0].date(), c1h.index[-1].date()
+                    entry["chart_5d_range"] = (
+                        first.strftime("%b %d")
+                        if first == last
+                        else f"{first.strftime('%b %d')} – {last.strftime('%b %d')}"
+                    )
+
+                result[t] = entry
+            except Exception as e:
+                logger.warning(f"[VIDEO_BUILDER] parse failed for {t}: {e}")
+                result[t] = empty
+
+    except Exception as e:
+        logger.warning(f"[VIDEO_BUILDER] batch fetch failed: {e}")
+
+    return result
+
+
 async def _fetch_stock_data(ticker: str) -> dict:
     def _pull():
         t = yf.Ticker(ticker)
@@ -433,7 +506,9 @@ async def _run_ffmpeg(s1: bytes, s2: bytes, s3: bytes, audio: bytes) -> bytes:
         return await asyncio.to_thread(_run)
 
 
-async def build_video(ticker: str, audio_bytes: bytes) -> bytes:
+async def build_video(
+    ticker: str, audio_bytes: bytes, prefetched: dict | None = None
+) -> bytes:
     """
     pipeline:
       - Fetches OHLC + chart data from yfinance
@@ -444,7 +519,7 @@ async def build_video(ticker: str, audio_bytes: bytes) -> bytes:
     """
     logger.info(f"[VIDEO_BUILDER] Starting {ticker}")
 
-    data = await _fetch_stock_data(ticker)
+    data = prefetched if prefetched else await _fetch_stock_data(ticker)
     is_positive = (data["change_pct"] or 0) >= 0
 
     td = data["trading_date"]

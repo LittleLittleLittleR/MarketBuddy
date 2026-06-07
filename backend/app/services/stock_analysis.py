@@ -1,16 +1,14 @@
-from app.utils.time_utils import sg_time_now
+from app.utils.time_utils import sg_time_now, get_time_to_6am
 from brightdata import BrightDataClient
 from typing import List
 from openai import AsyncOpenAI
 import httpx
 from upstash_redis.asyncio import Redis
 from loguru import logger
-import json
 
 from app.repositories.summary_repo import SummaryRepository
 from app.config import settings
 from app.schemas.scraping import NewsArticle
-from datetime import datetime, timezone
 from app.services.tts_service import generate_audio
 from app.services.video_builder import build_video
 from app.dependencies.s3_client import upload_bytes
@@ -165,7 +163,9 @@ class StockAnalysisService:
         )
         return response.choices[0].message.content or ""
 
-    async def generate_daily_video(self, ticker: str, context: str):
+    async def generate_daily_video(
+        self, ticker: str, context: str, prefetched: dict | None = None
+    ):
         """Script → TTS audio → video → S3 → Redis key."""
         ticker_upper = ticker.upper()
         try:
@@ -176,40 +176,25 @@ class StockAnalysisService:
                 return
 
             logger.debug(f"TTS Script for ${ticker_upper} video: {script}")
-            # pull cached price from Redis
-            price, change_pct = None, None
-            try:
-                cached = await self.redis_client.hmget("stock:prices", ticker_upper)
-                logger.debug(f"Cached price for {ticker_upper} found: {cached}")
-                if cached and cached[0]:
-                    raw = (
-                        cached[0] if isinstance(cached[0], str) else cached[0].decode()
-                    )
-                    data = json.loads(raw)
-                    price = data.get("price")
-                    opening = data.get("opening_price")
-                    if price and opening and opening > 0:
-                        change_pct = round((price - opening) / opening * 100, 2)
-            except Exception as e:
-                logger.warning(f"[VIDEO] Price fetch failed for {ticker_upper}: {e}")
 
-            # generate TTS → audio bytes
             audio_bytes = await generate_audio(script)
 
-            # use Pillow + FFmpeg → video bytes
-            video_bytes = await build_video(ticker_upper, audio_bytes)
+            video_bytes = await build_video(
+                ticker_upper, audio_bytes, prefetched=prefetched
+            )
 
             # upload to S3
             date = sg_time_now().strftime("%Y-%m-%d")
             s3_key = f"daily/{ticker_upper}/{date}.mp4"
             await upload_bytes(video_bytes, s3_key, "video/mp4")
 
+            ttl = int(get_time_to_6am())
             # store S3 key in Redis to generate presigned urls
             try:
                 await self.redis_client.set(
                     f"stock:{ticker_upper}:video:daily",
                     s3_key,
-                    ex=86400,  # expires after 24h
+                    ex=ttl,  # expires after 24h
                 )
             except Exception as e:
                 logger.exception(f"Error occured while setting stock video key: {e}")

@@ -15,6 +15,7 @@ from app.services.ticker_worker import TickerScraperService
 from app.dependencies.redis_client import get_redis
 from app.utils.time_utils import get_time_to_6am, is_market_open, sg_time_now
 from app.services.websocket_manager import ws_manager
+from app.services.video_builder import batch_fetch_chart_data
 
 logger.remove()
 
@@ -83,6 +84,7 @@ async def daily_analysis_scheduler():
                 logger.info(
                     f"[DAILY_SCHEDULER] Processing chunk {index + 1}/{len(chunks)}: {chunk}"
                 )
+                chart_data = await batch_fetch_chart_data(chunk)
 
                 async def analyse_one(ticker: str):
                     try:
@@ -92,8 +94,11 @@ async def daily_analysis_scheduler():
                         context = "\n".join(
                             [f"[{a.title}: {a.snippet}]" for a in links]
                         )
-                        return await analysis_service.scrape_and_summarise(
-                            ticker, context
+                        await analysis_service.scrape_and_summarise(ticker, context)
+                        await analysis_service.generate_daily_video(
+                            ticker,
+                            context,
+                            prefetched=chart_data.get(ticker.upper()),
                         )
                     except Exception as err:
                         logger.exception(
@@ -176,7 +181,6 @@ async def on_the_dot_clock_scheduler():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """
     minute_scheduler_task = asyncio.create_task(on_the_dot_clock_scheduler())
     daily_schedular_task = asyncio.create_task(daily_analysis_scheduler())
     logger.success("[LIFESPAN] Background schedulers are active")
@@ -189,13 +193,11 @@ async def lifespan(app: FastAPI):
         )
     except asyncio.CancelledError:
         logger.warning("[LIFESPAN] CancelledError")
-    """
     logger.success("[LIFESPAN] ALL Background scheduler successfully stopped.")
 
 
-# app = FastAPI(lifespan=lifespan)
+app = FastAPI(lifespan=lifespan)
 
-app = FastAPI()
 print(settings.ALLOWED_ORIGINS)
 app.add_middleware(
     CORSMiddleware,
