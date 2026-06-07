@@ -197,9 +197,7 @@ class StockAnalysisService:
             audio_bytes = await generate_audio(script)
 
             # use Pillow + FFmpeg → video bytes
-            video_bytes = await build_video(
-                ticker_upper, audio_bytes, opening, change_pct
-            )
+            video_bytes = await build_video(ticker_upper, audio_bytes)
 
             # upload to S3
             date = sg_time_now().strftime("%Y-%m-%d")

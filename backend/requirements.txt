@@ -13,3 +13,4 @@ PyJWT[crypto]>=2.8.0
 loguru
 aioboto3
 Pillow
+matplotlib
