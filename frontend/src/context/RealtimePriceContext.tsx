@@ -14,7 +14,7 @@ interface RealtimePriceContextType {
 
 type LivePriceUpdate = {
   price: number;
-  opening_price: number | null;
+  open: number | null;
 };
 
 type LivePricePayload = Record<string, LivePriceUpdate | string>;
@@ -38,12 +38,6 @@ export const RealtimePriceProvider = ({ children }: { children: React.ReactNode 
       toast.success('Live Terminal Connected', {
         description: 'Connected to Live Pricing Updates.',
         id: 'ws-status',
-      });
-    } else if (status === 'error') {
-      toast.error('Connection Failed', {
-        description: 'Max reconnection limits exceeded. Live pricing updates paused.',
-        id: 'ws-status',
-        duration: Infinity,
       });
     } else if (status === 'connecting' && rwsRef.current && rwsRef.current.retryCount > 0) {
       toast.loading('Reconnecting...', {
@@ -119,7 +113,7 @@ export const RealtimePriceProvider = ({ children }: { children: React.ReactNode 
                 return {
                   ...stock,
                   current_price: normalizedUpdate.price,
-                  open_price: normalizedUpdate.opening_price,
+                  open_price: normalizedUpdate.open,
                 };
               }
               return stock;
@@ -143,7 +137,7 @@ export const RealtimePriceProvider = ({ children }: { children: React.ReactNode 
                 return {
                   ...stock,
                   current_price: normalizedUpdate.price,
-                  open_price: normalizedUpdate.opening_price,
+                  open_price: normalizedUpdate.open,
                 };
               }),
             }));

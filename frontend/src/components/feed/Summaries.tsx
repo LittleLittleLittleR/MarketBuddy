@@ -1,8 +1,9 @@
+import type { SummaryPayload } from "@/hooks/summary";
 import { Button } from "../ui/button";
 import { Card, CardContent } from "../ui/card";
 
 type Props = {
-  summaries: string[];
+  summaries: SummaryPayload[];
   isFetching: boolean;
   onFetchSummaries: () => Promise<void>;
   disableFetch: boolean;
@@ -51,14 +52,14 @@ const Summaries = ({ summaries, isFetching, onFetchSummaries, disableFetch }: Pr
                   <div className="h-2 w-2 rounded-full bg-green-500" />
 
                   <span className="text-sm font-medium text-muted-foreground">
-                    Summary #{index + 1}
+                    Summary #{index + 1}: {summary.ticker}
                   </span>
                 </div>
 
                 <div
                   className="prose prose-sm max-w-none dark:prose-invert"
                   dangerouslySetInnerHTML={{
-                    __html: summary
+                    __html: summary.summary
                       .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
                       .replace(/\n/g, "<br />"),
                   }}
