@@ -20,7 +20,7 @@ async def analyse_stocks(
     current_user=Depends(get_current_user),
 ):  # takes in a list containing stocks required to scrape and summarise
     logger.success(
-        f"[ANALYSE-STOCKS] Received request from {current_user.get("email")}"
+        f"[ANALYSE-STOCKS] Received request from {current_user.get('email')}"
     )
 
     start = perf_counter()
