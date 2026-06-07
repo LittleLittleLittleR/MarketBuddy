@@ -70,7 +70,8 @@ async def websocket_prices_endpoint(websocket: WebSocket, token: str | None = No
             await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
             return
 
-    await redis_client.sadd("portfolio:tickers", *user_tickers)
+    if len(user_tickers) != 0:
+        await redis_client.sadd("portfolio:tickers", *user_tickers)
 
     await ws_manager.connect(websocket)
 
