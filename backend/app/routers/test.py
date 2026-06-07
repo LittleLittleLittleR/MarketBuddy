@@ -1,15 +1,11 @@
-from fastapi import APIRouter, HTTPException, Depends
-from httpx import get
+from fastapi import APIRouter, Depends
 from app.services.websocket_manager import ws_manager
 from app.services.stock_analysis import StockAnalysisService
 from app.dependencies import get_stock_service
-from app.dependencies.supabase_client import get_supabase
 from app.dependencies.redis_client import get_redis
 from loguru import logger
 from app.services.video_builder import batch_fetch_chart_data
 import asyncio
-from app.repositories.summary_repo import SummaryRepository
-from app.utils.time_utils import get_time_to_6am
 
 router = APIRouter(prefix="/api/test", tags=["dev-testing"])
 redis_client = get_redis()
@@ -45,11 +41,6 @@ async def test_generate_video(
 
 @router.post("/tickers/batch_test")
 async def test_batch_prices():
-    supabase_client = await get_supabase()
-    analysis_service = StockAnalysisService(
-        redis_client=redis_client,
-        summary_repository=SummaryRepository(supabase_client=supabase_client),
-    )
     CHUNK_SIZE = 10
 
     try:  # scan Redis for the list of all tickers
