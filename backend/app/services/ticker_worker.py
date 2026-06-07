@@ -103,24 +103,24 @@ class TickerScraperService:
                                 f"Ticker {ticker} not found in yfinance response columns"
                             )
 
-                        close_series = data[ticker]["Close"].dropna()
-                        open_series = data[ticker]["Open"].dropna()
+                        ticker_data = data[ticker].dropna()
 
                     # 2. Handle Single-Index DataFrames (Single Ticker Fetched)
                     else:
-                        close_series = data["Close"].dropna()
-                        open_series = data["Open"].dropna()
 
-                    if close_series.empty or open_series.empty:
+                        ticker_data = data.dropna()
+
+                    if ticker_data.empty:
                         raise ValueError(f"No price history found for {ticker}")
 
-                    current_price = close_series.iloc[-1]
-                    opening_price = open_series.iloc[0]
-
+                    latest = ticker_data.iloc[-1]
                     payload[ticker] = json.dumps(
                         {
-                            "price": round(float(current_price), 2),
-                            "opening_price": round(float(opening_price), 2),
+                            "open": round(float(latest["Open"]), 2),
+                            "close": round(float(latest["Close"]), 2),
+                            "high": round(float(latest["High"]), 2),
+                            "low": round(float(latest["Low"]), 2),
+                            "price": round(float(latest["Close"]), 2),
                             "status": "SUCCESS",
                             "updated_at": time.time(),
                         }
@@ -131,8 +131,11 @@ class TickerScraperService:
                     )
                     payload[ticker] = json.dumps(
                         {
+                            "open": None,
+                            "close": None,
+                            "high": None,
+                            "low": None,
                             "price": None,
-                            "opening_price": None,
                             "status": "FAILED",
                             "updated_at": time.time(),
                         }
@@ -142,8 +145,11 @@ class TickerScraperService:
             for ticker in tickers:
                 payload[ticker] = json.dumps(
                     {
+                        "open": None,
+                        "close": None,
+                        "high": None,
+                        "low": None,
                         "price": None,
-                        "opening_price": None,
                         "status": "FAILED",
                         "updated_at": time.time(),
                     }

@@ -15,13 +15,13 @@ import { PortfoliolistTable } from '@/components/dashboard/PortfoliolistTable'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { SidebarProvider } from '@/components/ui/sidebar'
 import { portfolioHooks } from '@/hooks/portfolio'
-import { stockSummaryUpdater } from '@/hooks/summary'
+import { stockSummaryUpdater, type SummaryPayload } from '@/hooks/summary'
 
 const Home = () => {
   const [isAdding, setIsAdding] = useState(false)
   const [selectedView, setSelectedView] = useState<string>('watchlist')
   const [activeTab, setActiveTab] = useState('dashboard')
-  const [summaryList, setSummaryList] = useState<string[]>([])
+  const [summaryList, setSummaryList] = useState<SummaryPayload[]>([])
   const [isFetchingSummaries, setIsFetchingSummaries] = useState(false)
 
   const navigate = useNavigate()

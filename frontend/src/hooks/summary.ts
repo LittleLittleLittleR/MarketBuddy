@@ -1,8 +1,13 @@
 import { fetchTickerSummaries } from '@/api/summary';
 import { stockService } from '@/db/stock';
 
+export interface SummaryPayload {
+  ticker: string;
+  summary: string
+}
+
 interface Props {
-  setSummarylist: (summary: string[]) => void; 
+  setSummarylist: (summary: SummaryPayload[]) => void;
 }
 
 export const stockSummaryUpdater = async ({ setSummarylist }: Props) => {
@@ -10,7 +15,7 @@ export const stockSummaryUpdater = async ({ setSummarylist }: Props) => {
     const tickers = (await stockService.getStocks()).map(s => s.ticker);
 
     if (!tickers.length) return;
-      
+
     const data = await fetchTickerSummaries(tickers);
 
     //sort summaries by how recently they were created

@@ -32,7 +32,7 @@ async def analyse_stocks(
         cached_record = await service.redis_client.get(cache_key)
         if cached_record:
             logger.success(f"Cached record for {ticker} found!")
-            return cached_record
+            return {"ticker": ticker.upper(), "summary": cached_record}
         else:
             logger.warning(
                 f"No cached record found for {ticker}! Performing scraping now..."
@@ -50,11 +50,15 @@ async def analyse_stocks(
             print("Context: ")
             print(context)
             print()
-        return await service.scrape_and_summarise(ticker, context)
+        summary = await service.scrape_and_summarise(ticker, context)
+        payload = {"ticker": ticker.upper(), "summary": summary}
+        return payload
 
     results = await asyncio.gather(
         *[analyse_one(t) for t in stocks.tickers], return_exceptions=True
     )
+
+    # logger.debug(f"Results: {results}")
 
     response = []
     # check if got any exceptions
