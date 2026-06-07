@@ -1,7 +1,6 @@
 import asyncio
 import traceback
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import InstanceOf
+from fastapi import APIRouter, Depends
 from app.config import settings
 from app.dependencies.auth import get_current_user
 from app.services.stock_analysis import StockAnalysisService
