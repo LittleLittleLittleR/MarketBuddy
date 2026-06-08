@@ -1,3 +1,5 @@
+import { useState } from 'react'
+
 import {
   Sidebar,
   SidebarContent,
@@ -7,6 +9,7 @@ import {
 } from '@/components/ui/sidebar'
 
 import { Button } from '@/components/ui/button'
+import { AddPortfolioPopup } from './AddPortfolio'
 
 type PortfolioProps = {
   portfolios: string[]
@@ -15,7 +18,10 @@ type PortfolioProps = {
 }
 
 export function DashboardSidebar({ portfolios, selectedView, onSelectView }: PortfolioProps) {
+  const [openAddPortfolio, setOpenAddPortfolio] = useState(false)
+
   return (
+    <>
     <Sidebar collapsible="none" className="h-full rounded-lg border bg-background max-h-[80vh]">
       <div className="flex h-full flex-col">
         {/* Scrollable section */}
@@ -52,12 +58,15 @@ export function DashboardSidebar({ portfolios, selectedView, onSelectView }: Por
               Manage Portfolios
             </Button>
 
-            <Button className="w-full">
+            <Button className="w-full" onClick={() => setOpenAddPortfolio(true)}>
               Add Portfolio
             </Button>
           </div>
         </SidebarFooter>
       </div>
     </Sidebar>
+
+    <AddPortfolioPopup isOpen={openAddPortfolio} onClose={() => setOpenAddPortfolio(false)} />
+    </>
   )
 }
