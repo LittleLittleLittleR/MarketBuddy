@@ -22,12 +22,6 @@ export function DashboardSidebar({ portfolioNames, selectedView, onSelectView }:
   const [openAddPortfolio, setOpenAddPortfolio] = useState(false)
   const [openManagePortfolio, setOpenManagePortfolio] = useState(false)
 
-  const [names, setPortfolioNames] = useState<[string, string][]>([])
-
-  useEffect(() => {
-    setPortfolioNames(portfolioNames)
-  }, [portfolioNames])
-
   return (
     <>
     <Sidebar collapsible="none" className="h-full rounded-lg border bg-background max-h-[80vh]">
@@ -44,7 +38,7 @@ export function DashboardSidebar({ portfolioNames, selectedView, onSelectView }:
                 >
                   Watchlist
                 </Button>
-                {names.map(([name, _]) => (
+                {portfolioNames.map(([name, _]) => (
                   <Button
                     key={name}
                     variant={selectedView === name ? 'default' : 'ghost'}
@@ -75,13 +69,11 @@ export function DashboardSidebar({ portfolioNames, selectedView, onSelectView }:
     </Sidebar>
 
     <AddPortfolioPopup 
-      isOpen={openAddPortfolio} 
-      setPortfolioNames={setPortfolioNames}
+      isOpen={openAddPortfolio}
       onClose={() => setOpenAddPortfolio(false)} 
     />
     <ManagePortfolioPopup 
       isOpen={openManagePortfolio} 
-      setPortfolioNames={setPortfolioNames}
       onClose={() => setOpenManagePortfolio(false)} 
     />
     </>

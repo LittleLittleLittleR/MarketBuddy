@@ -1,4 +1,5 @@
-import { useState, type Dispatch, type SetStateAction } from 'react'
+import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { portfolioHooks } from '@/hooks/portfolio'
 
 import { Button } from '@/components/ui/button'
@@ -6,18 +7,24 @@ import { Input } from '@/components/ui/input'
 
 type AddPortfolioPopupProps = {
   isOpen: boolean
-  setPortfolioNames: Dispatch<SetStateAction<[string, string][]>>
   onClose: () => void
 }
 
-export function AddPortfolioPopup({ isOpen, setPortfolioNames, onClose }: AddPortfolioPopupProps) {
+export function AddPortfolioPopup({ isOpen, onClose }: AddPortfolioPopupProps) {
   const [inputName, setInputName] = useState('')
+  const queryClient = useQueryClient()
 
-  const handleCreatePortfolio = () => {
+  const handleCreatePortfolio = async () => {
     if (inputName.trim()) {
-      portfolioHooks.addPortfolio(inputName.trim())
+      const trimmedName = inputName.trim()
+      await portfolioHooks.addPortfolio(trimmedName)
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['portfolioNames'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolioPrices'] }),
+      ])
+
       setInputName('')
-      setPortfolioNames((prev: [string, string][]) => [...prev, [inputName.trim(), new Date().toISOString()]])
       onClose()
     }
   }

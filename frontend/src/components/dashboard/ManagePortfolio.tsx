@@ -1,4 +1,5 @@
-import { useEffect, useState, type Dispatch, type SetStateAction } from 'react'
+import { useEffect, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { portfolioHooks } from '@/hooks/portfolio'
 
 import { Button } from '@/components/ui/button'
@@ -6,12 +7,12 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 
 type ManagePortfolioPopupProps = {
   isOpen: boolean
-  setPortfolioNames: Dispatch<SetStateAction<[string, string][]>>
   onClose: () => void
 }
 
-export function ManagePortfolioPopup({ isOpen, setPortfolioNames, onClose }: ManagePortfolioPopupProps) {
+export function ManagePortfolioPopup({ isOpen, onClose }: ManagePortfolioPopupProps) {
   const [portfolios, setPortfolios] = useState<[string, string][]>([])
+  const queryClient = useQueryClient()
 
   useEffect(() => {
     const loadPortfolios = async () => {
@@ -23,11 +24,17 @@ export function ManagePortfolioPopup({ isOpen, setPortfolioNames, onClose }: Man
     loadPortfolios()
   }, [isOpen])
 
-  const handleDeletePortfolio = (portfolio: string) => {
+  const handleDeletePortfolio = async (portfolio: string) => {
     if (portfolio.trim()) {
-      portfolioHooks.deletePortfolio(portfolio.trim())
-      setPortfolios(portfolios.filter(p => p[0] !== portfolio))
-      setPortfolioNames(prev => prev.filter(p => p[0] !== portfolio))
+      const trimmedPortfolio = portfolio.trim()
+      await portfolioHooks.deletePortfolio(trimmedPortfolio)
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['portfolioNames'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolioPrices'] }),
+      ])
+
+      setPortfolios(portfolios.filter(p => p[0] !== trimmedPortfolio))
       onClose()
     }
   }
