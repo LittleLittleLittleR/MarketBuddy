@@ -27,6 +27,14 @@ const createPortfolio = async (
   portfolio: Omit<TablesInsert<'portfolios'>, 'user_id'>
 ) => {
   const user = await dbAuth.checkUserAuth();
+  
+  // users should not have portfolios with the same name
+  const porfolios = await getMyPortfolios();
+  for (const p of porfolios) {
+    if (p.name === portfolio.name) {
+      throw new Error('Portfolio with the same name already exists');
+    }
+  }
 
   const { data, error } = await supabase
     .from('portfolios')
@@ -79,10 +87,23 @@ const deletePortfolio = async (portfolioId: number) => {
   }
 };
 
+const deleteMyPortfolioByName = async (name: string) => {
+  const portfolios = await getMyPortfolios();
+
+  for (const p of portfolios) {
+    if (p.name === name) {
+      await deletePortfolio(p.id);
+      return;
+    }
+  }
+};
+  
+
 
 export const portfolioService = {
   getMyPortfolios,
   createPortfolio,
   updatePortfolio,
   deletePortfolio,
+  deleteMyPortfolioByName,
 };
