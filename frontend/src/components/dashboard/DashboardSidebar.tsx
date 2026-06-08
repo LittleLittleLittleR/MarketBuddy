@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 import {
   Sidebar,
@@ -38,7 +38,7 @@ export function DashboardSidebar({ portfolioNames, selectedView, onSelectView }:
                 >
                   Watchlist
                 </Button>
-                {portfolioNames.map(([name, _]) => (
+                {portfolioNames.map(([name]) => (
                   <Button
                     key={name}
                     variant={selectedView === name ? 'default' : 'ghost'}
