@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type Dispatch, type SetStateAction } from 'react'
 import { portfolioHooks } from '@/hooks/portfolio'
 
 import { Button } from '@/components/ui/button'
@@ -6,16 +6,18 @@ import { Input } from '@/components/ui/input'
 
 type AddPortfolioPopupProps = {
   isOpen: boolean
+  setPortfolioNames: Dispatch<SetStateAction<[string, string][]>>
   onClose: () => void
 }
 
-export function AddPortfolioPopup({ isOpen, onClose }: AddPortfolioPopupProps) {
-  const [portfolioName, setPortfolioName] = useState('')
+export function AddPortfolioPopup({ isOpen, setPortfolioNames, onClose }: AddPortfolioPopupProps) {
+  const [inputName, setInputName] = useState('')
 
   const handleCreatePortfolio = () => {
-    if (portfolioName.trim()) {
-      portfolioHooks.addPortfolio(portfolioName.trim())
-      setPortfolioName('')
+    if (inputName.trim()) {
+      portfolioHooks.addPortfolio(inputName.trim())
+      setInputName('')
+      setPortfolioNames((prev: [string, string][]) => [...prev, [inputName.trim(), new Date().toISOString()]])
       onClose()
     }
   }
@@ -36,8 +38,8 @@ export function AddPortfolioPopup({ isOpen, onClose }: AddPortfolioPopupProps) {
           type="text"
           placeholder="Portfolio Name"
           className="w-full border p-2 mb-4"
-          value={portfolioName}
-          onChange={(e) => setPortfolioName(e.target.value)}
+          value={inputName}
+          onChange={(e) => setInputName(e.target.value)}
         />
         <Button 
           className="w-full"

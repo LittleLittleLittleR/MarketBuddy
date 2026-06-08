@@ -43,6 +43,11 @@ const fetchStocks = async () => {
   return portfoliolist
 }
 
+const getPortfolios: () => Promise<[string, string][]> = async () => {
+  const portfolios = await portfolioService.getMyPortfolios();
+  return portfolios.map(p => [p.name, p.created_at]);
+}
+
 const addPortfolio = async (name: string) => {
   try {
       if (!name?.trim()) {
@@ -69,6 +74,7 @@ const deletePortfolio = async (name: string) => {
 
 export const portfolioHooks = {
   fetchStocks,
+  getPortfolios,
   addPortfolio,
   deletePortfolio,
 }
