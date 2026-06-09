@@ -5,14 +5,14 @@ import type { WatchlistStockDisplay } from '@/types/stock';
 import { watchlistHooks } from '@/hooks/watchlist';
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
-type StocklistHeaderProps = {
+type WatchlistHeaderProps = {
   stocklist: WatchlistStockDisplay[];
   isAdding: boolean
   setIsAdding: Dispatch<SetStateAction<boolean>>
   stockType: 'watchlist' | 'portfolio' | 'summarylist';
 }
 
-export function StocklistHeader({ stocklist, isAdding, setIsAdding, stockType }: StocklistHeaderProps) {
+export function WatchlistHeader({ stocklist, isAdding, setIsAdding, stockType }: WatchlistHeaderProps) {
   const [newTicker, setNewTicker] = useState('')
   const queryClient = useQueryClient();
   const isLimitReached = stocklist.length >= 3 && stockType === 'summarylist' // only apply limit to summarylist

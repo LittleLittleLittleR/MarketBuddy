@@ -8,7 +8,7 @@ import type { WatchlistStockDisplay, PortfolioListDisplay } from '@/types/stock'
 
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar'
 import Summaries from '@/components/feed/Summaries'
-import { StocklistHeader } from '@/components/dashboard/StocklistHeader'
+import { WatchlistHeader } from '@/components/dashboard/WatchlistHeader'
 import { WatchlistTable } from '@/components/dashboard/WatchlistTable'
 import { PortfoliolistTable } from '@/components/dashboard/PortfoliolistTable'
 
@@ -113,7 +113,7 @@ const Home = () => {
               <div className="space-y-6">
                 {selectedView === 'watchlist' && (
                   <>
-                    <StocklistHeader
+                    <WatchlistHeader
                       stocklist={watchlistStocks}
                       isAdding={isAdding}
                       setIsAdding={setIsAdding}
