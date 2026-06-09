@@ -1,5 +1,7 @@
 from datetime import datetime, time, timedelta
 import zoneinfo
+import pandas_market_calendars as mcal
+import pytz
 
 
 def get_time_to_6am():
@@ -41,3 +43,28 @@ def sg_time_now():
     """
 
     return datetime.now(zoneinfo.ZoneInfo("Asia/Singapore"))
+
+
+def seconds_until_market_open() -> float:
+    """Returns seconds until the next NYSE market open, accounting for weekends/holidays."""
+    eastern = pytz.timezone("America/New_York")
+    now_et = datetime.now(eastern)
+
+    nyse = mcal.get_calendar("NYSE")
+
+    # Check the next 7 days for a valid trading session
+    schedule = nyse.schedule(
+        start_date=now_et.strftime("%Y-%m-%d"),
+        end_date=(now_et + timedelta(days=7)).strftime("%Y-%m-%d"),
+    )
+
+    for _, row in schedule.iterrows():
+        market_open_utc = row["market_open"].to_pydatetime()
+        market_open_et = market_open_utc.astimezone(eastern)
+
+        if market_open_et > now_et:
+            delta = (market_open_et - now_et).total_seconds()
+            return delta
+
+    # fallback: sleep 1 hour and retry if no schedule found
+    return 3600

@@ -14,3 +14,4 @@ loguru
 aioboto3
 Pillow
 matplotlib
+pandas_market_calendars
