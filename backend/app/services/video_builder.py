@@ -14,6 +14,7 @@ import matplotlib.ticker as mticker
 from PIL import Image, ImageDraw, ImageFont
 from loguru import logger
 from app.utils.time_utils import sg_time_now
+import matplotlib.pyplot as plt
 
 W, H = 1080, 1920
 
@@ -26,6 +27,8 @@ RED = (248, 81, 73)
 ASSETS = Path(__file__).parent.parent / "assets"
 BG_IMAGE = ASSETS / "bg.jpg"
 FONTS_DIR = ASSETS / "fonts"
+
+_BG_CACHE: Image.Image | None = None
 
 
 def _font(variant: str, size: int) -> ImageFont.FreeTypeFont:
@@ -44,14 +47,17 @@ def _font(variant: str, size: int) -> ImageFont.FreeTypeFont:
 
 
 def _load_bg(overlay_alpha: int = 140) -> Image.Image:
-    try:
-        bg = Image.open(BG_IMAGE).convert("RGBA").resize((W, H), Image.LANCZOS)
-    except FileNotFoundError:
-        logger.warning("[VIDEO_BUILDER] bg.jpg not found, using solid background")
-        bg = Image.new("RGBA", (W, H), (10, 12, 18, 255))
+    global _BG_CACHE
+    if _BG_CACHE is None:
+        try:
+            bg = Image.open(BG_IMAGE).convert("RGBA").resize((W, H), Image.LANCZOS)
+        except FileNotFoundError:
+            logger.warning("[VIDEO_BUILDER] bg.jpg not found, using solid background")
+            bg = Image.new("RGBA", (W, H), (10, 12, 18, 255))
+        _BG_CACHE = bg
 
     overlay = Image.new("RGBA", (W, H), (0, 0, 0, overlay_alpha))
-    return Image.alpha_composite(bg, overlay)
+    return Image.alpha_composite(_BG_CACHE, overlay)
 
 
 def _build_info_scene(
@@ -248,6 +254,7 @@ def _build_chart_scene(
             bbox_inches="tight",
             pad_inches=0.15,
         )
+        plt.close(fig)
         chart_buf.seek(0)
 
         chart_img = (
@@ -485,6 +492,8 @@ async def _run_ffmpeg(s1: bytes, s2: bytes, s3: bytes, audio: bytes) -> bytes:
                     "[v]",
                     "-map",
                     "3:a",
+                    "-threads",
+                    "1",
                     "-c:v",
                     "libx264",
                     "-c:a",
