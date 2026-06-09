@@ -117,7 +117,7 @@ async def daily_analysis_scheduler():
                         return ticker, None, None
 
                 # fire the analysis ONLY concurrently -> then feed results into video builder synchrononously
-                results = await asyncio.gather(
+                await asyncio.gather(
                     *[analyse_one(t) for t in chunk], return_exceptions=True
                 )
                 await asyncio.sleep(2)  # prevent spam for api calls
