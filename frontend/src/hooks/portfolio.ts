@@ -43,7 +43,38 @@ const fetchStocks = async () => {
   return portfoliolist
 }
 
+const getPortfolios: () => Promise<[string, string][]> = async () => {
+  const portfolios = await portfolioService.getMyPortfolios();
+  return portfolios.map(p => [p.name, p.created_at]);
+}
+
+const addPortfolio = async (name: string) => {
+  try {
+      if (!name?.trim()) {
+        return
+      }
+      await portfolioService.createPortfolio({name});
+  
+    } catch (error) {
+      console.error('Failed to add new portfolio:', error)
+    }
+}
+
+const deletePortfolio = async (name: string) => {
+  try {
+    if (!name?.trim()) {
+      return
+    }
+    await portfolioService.deleteMyPortfolioByName(name);
+
+  } catch (error) {
+    console.error('Failed to delete portfolio:', error)
+  }
+}
 
 export const portfolioHooks = {
   fetchStocks,
+  getPortfolios,
+  addPortfolio,
+  deletePortfolio,
 }

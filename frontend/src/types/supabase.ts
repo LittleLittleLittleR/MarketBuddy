@@ -16,20 +16,20 @@ export type Database = {
     Tables: {
       portfolios: {
         Row: {
+          created_at: string
           id: number
-          is_default: boolean | null
           name: string
           user_id: string
         }
         Insert: {
+          created_at?: string
           id?: number
-          is_default?: boolean | null
           name: string
           user_id: string
         }
         Update: {
+          created_at?: string
           id?: number
-          is_default?: boolean | null
           name?: string
           user_id?: string
         }
@@ -110,7 +110,15 @@ export type Database = {
           summary_date?: string | null
           ticker?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "summaries_ticker_fkey"
+            columns: ["ticker"]
+            isOneToOne: false
+            referencedRelation: "stocks"
+            referencedColumns: ["ticker"]
+          },
+        ]
       }
       summarylist_stocks: {
         Row: {

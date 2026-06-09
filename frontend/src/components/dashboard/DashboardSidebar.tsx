@@ -1,3 +1,5 @@
+import { useState } from 'react'
+
 import {
   Sidebar,
   SidebarContent,
@@ -7,15 +9,21 @@ import {
 } from '@/components/ui/sidebar'
 
 import { Button } from '@/components/ui/button'
+import { AddPortfolioPopup } from './AddPortfolio'
+import { ManagePortfolioPopup } from './ManagePortfolio'
 
 type PortfolioProps = {
-  portfolios: string[]
+  portfolioNames: [string, string][]
   selectedView: string
   onSelectView: (view: string) => void
 }
 
-export function DashboardSidebar({ portfolios, selectedView, onSelectView }: PortfolioProps) {
+export function DashboardSidebar({ portfolioNames, selectedView, onSelectView }: PortfolioProps) {
+  const [openAddPortfolio, setOpenAddPortfolio] = useState(false)
+  const [openManagePortfolio, setOpenManagePortfolio] = useState(false)
+
   return (
+    <>
     <Sidebar collapsible="none" className="h-full rounded-lg border bg-background max-h-[80vh]">
       <div className="flex h-full flex-col">
         {/* Scrollable section */}
@@ -30,14 +38,14 @@ export function DashboardSidebar({ portfolios, selectedView, onSelectView }: Por
                 >
                   Watchlist
                 </Button>
-                {portfolios.map((portfolio) => (
+                {portfolioNames.map(([name]) => (
                   <Button
-                    key={portfolio}
-                    variant={selectedView === portfolio ? 'default' : 'ghost'}
+                    key={name}
+                    variant={selectedView === name ? 'default' : 'ghost'}
                     className="w-full justify-start"
-                    onClick={() => onSelectView(portfolio)}
+                    onClick={() => onSelectView(name)}
                   >
-                    {portfolio}
+                    {name}
                   </Button>
                 ))}
               </div>
@@ -48,16 +56,26 @@ export function DashboardSidebar({ portfolios, selectedView, onSelectView }: Por
         {/* Fixed bottom buttons */}
         <SidebarFooter className="border-t p-4">
           <div className="space-y-2">
-            <Button variant="outline" className="w-full">
+            <Button variant="outline" className="w-full" onClick={() => setOpenManagePortfolio(true)}>
               Manage Portfolios
             </Button>
 
-            <Button className="w-full">
+            <Button variant="outline" className="w-full" onClick={() => setOpenAddPortfolio(true)}>
               Add Portfolio
             </Button>
           </div>
         </SidebarFooter>
       </div>
     </Sidebar>
+
+    <AddPortfolioPopup 
+      isOpen={openAddPortfolio}
+      onClose={() => setOpenAddPortfolio(false)} 
+    />
+    <ManagePortfolioPopup 
+      isOpen={openManagePortfolio} 
+      onClose={() => setOpenManagePortfolio(false)} 
+    />
+    </>
   )
 }

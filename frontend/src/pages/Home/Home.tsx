@@ -61,6 +61,14 @@ const Home = () => {
     },
     staleTime: Infinity,
   })
+  const { data: portfolioNames = [] } = useQuery<[string, string][]>({
+    queryKey: ['portfolioNames'],
+    queryFn: async () => {
+      const res = await portfolioHooks.getPortfolios()
+      return res || []
+    },
+    staleTime: Infinity,
+  })
 
   const selectedPortfolio = portfolios.find((portfolio) => portfolio.name === selectedView)
 
@@ -97,7 +105,7 @@ const Home = () => {
           <SidebarProvider>
             <div className="grid gap-6 lg:grid-cols-[240px_minmax(0,1fr)]">
               <DashboardSidebar
-                portfolios={portfolios.map((portfolio) => portfolio.name)}
+                portfolioNames={portfolioNames}
                 selectedView={selectedView}
                 onSelectView={setSelectedView}
               />
