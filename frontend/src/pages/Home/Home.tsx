@@ -9,6 +9,7 @@ import type { WatchlistStockDisplay, PortfolioListDisplay } from '@/types/stock'
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar'
 import Summaries from '@/components/feed/Summaries'
 import { WatchlistHeader } from '@/components/dashboard/WatchlistHeader'
+import { PortfolioHeader } from '@/components/dashboard/PortfolioHeader'
 import { WatchlistTable } from '@/components/dashboard/WatchlistTable'
 import { PortfoliolistTable } from '@/components/dashboard/PortfoliolistTable'
 
@@ -114,17 +115,21 @@ const Home = () => {
                 {selectedView === 'watchlist' && (
                   <>
                     <WatchlistHeader
-                      stocklist={watchlistStocks}
                       isAdding={isAdding}
                       setIsAdding={setIsAdding}
-                      stockType="watchlist"
                     />
                     <WatchlistTable stocks={watchlistStocks} />
                   </>
                 )}
 
                 {selectedView !== 'watchlist' && selectedPortfolio && (
-                  <PortfoliolistTable portfolio={selectedPortfolio} />
+                  <>
+                    <PortfolioHeader
+                      isAdding={isAdding}
+                      setIsAdding={setIsAdding}
+                    />
+                    <PortfoliolistTable portfolio={selectedPortfolio} />
+                  </>
                 )}
               </div>
             </div>

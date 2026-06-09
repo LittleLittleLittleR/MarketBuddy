@@ -1,15 +1,16 @@
 import { useState, type Dispatch, type SetStateAction } from 'react'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
+
 import { watchlistHooks } from '@/hooks/watchlist';
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
-type WatchlistHeaderProps = {
+type PortfolioHeaderProps = {
   isAdding: boolean
   setIsAdding: Dispatch<SetStateAction<boolean>>
 }
 
-export function WatchlistHeader({ isAdding, setIsAdding }: WatchlistHeaderProps) {
+export function PortfolioHeader({ isAdding, setIsAdding }: PortfolioHeaderProps) {
   const [newTicker, setNewTicker] = useState('')
   const queryClient = useQueryClient();
 
@@ -21,7 +22,7 @@ export function WatchlistHeader({ isAdding, setIsAdding }: WatchlistHeaderProps)
       setIsAdding(true)
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['watchlistPrices'] }) // invalidate querykey for repoll
+      queryClient.invalidateQueries({ queryKey: ['portfolioPrices'] }) // invalidate querykey for repoll
     },
     onError: (error) => {
       console.error('Failed to add stock entry:', error)
@@ -32,8 +33,7 @@ export function WatchlistHeader({ isAdding, setIsAdding }: WatchlistHeaderProps)
   })
 
   const handleAddStock = async (ticker: string) => {
-    const cleanTicker = ticker.toUpperCase()
-    addStockMutation.mutate(cleanTicker)
+    // TODO
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -47,7 +47,7 @@ export function WatchlistHeader({ isAdding, setIsAdding }: WatchlistHeaderProps)
   return (
     <div className="mb-6">
       <div>
-        <h2 className="text-3xl font-bold tracking-tight">Your Watchlist</h2>
+        <h2 className="text-3xl font-bold tracking-tight">Your Portfolio</h2>
         <p className="text-muted-foreground">Track your favourite stocks in one place</p>
       </div>
       <Separator className="my-6" />
