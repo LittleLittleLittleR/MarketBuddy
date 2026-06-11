@@ -12,7 +12,12 @@ from app.routers import analysis, test, tickers, websocket_router, videos
 from app.services.stock_analysis import StockAnalysisService
 from app.services.ticker_worker import TickerScraperService
 from app.dependencies.redis_client import get_redis
-from app.utils.time_utils import get_time_to_6am, is_market_open, sg_time_now
+from app.utils.time_utils import (
+    get_time_to_6am,
+    is_market_open,
+    sg_time_now,
+    seconds_until_market_open,
+)
 from app.services.websocket_manager import ws_manager
 from app.services.video_builder import batch_fetch_chart_data
 
@@ -86,29 +91,63 @@ async def daily_analysis_scheduler():
                 chart_data = await batch_fetch_chart_data(chunk)
 
                 async def analyse_one(ticker: str):
+                    """
+                    # returns ticker, context, chart_data for ticker -> feed to video builder
+                    """
                     try:
                         links = await analysis_service.fetch_news_links(ticker=ticker)
                         if not links:
-                            return
+                            return ticker, None, None
                         context = "\n".join(
                             [f"[{a.title}: {a.snippet}]" for a in links]
                         )
                         await analysis_service.scrape_and_summarise(ticker, context)
+                        """
                         await analysis_service.generate_daily_video(
                             ticker,
                             context,
                             prefetched=chart_data.get(ticker.upper()),
                         )
+                        """
+                        return ticker, context, chart_data.get(ticker.upper())
                     except Exception as err:
                         logger.exception(
                             f"[DAILY_SCHEDULER ERROR] Failed on {ticker}: {err}"
                         )
+                        return ticker, None, None
 
-                # fire the analysis concurrently
+                # fire the analysis ONLY concurrently -> then feed results into video builder synchrononously
                 await asyncio.gather(
                     *[analyse_one(t) for t in chunk], return_exceptions=True
                 )
                 await asyncio.sleep(2)  # prevent spam for api calls
+
+                """
+                Video section: Commenting for now so not going to run daily 
+
+                # build videos one by one to prevent RAM spike
+                for result in results:
+                    if isinstance(result, BaseException) or not isinstance(
+                        result, tuple
+                    ):
+                        continue
+                    ticker, context, prefetched = result
+                    if context is None:
+                        logger.warning(f"Issue when generating video for {result[0]}")
+                        continue
+                    try:
+                        logger.info(f"Generating video for {ticker}...")
+                        await analysis_service.generate_daily_video(
+                            ticker, context, prefetched=prefetched
+                        )
+                        logger.success(f"Completed generating video for {ticker}!")
+                    except Exception as e:
+                        logger.exception(
+                            f"Issue while generating video for {ticker}: {e}"
+                        )
+
+                    await asyncio.sleep(1)
+                    """
 
             logger.info("[DAILY_SCHEDULER] Daily sweep finished completely.")
 
@@ -120,12 +159,21 @@ async def daily_analysis_scheduler():
 
 
 async def on_the_dot_clock_scheduler():
-    scraper = TickerScraperService(redis_client, max_sub_batch_size=5)
+    scraper = TickerScraperService(redis_client, max_sub_batch_size=10)
 
     logger.info("[MINUTE_SCHEDULER]: Starting scheduler...")
     while True:
         try:
             now = sg_time_now()
+
+            if not is_market_open():
+                sleep_seconds = seconds_until_market_open()
+                logger.info(
+                    f"market closed. sleeping for {sleep_seconds:.0f}s until market open."
+                )
+                await asyncio.sleep(sleep_seconds)
+                continue
+
             seconds_until_next_minute = 60 - now.second - (now.microsecond / 1000000.0)
 
             # sleep til next cycle
