@@ -1,8 +1,9 @@
-import { Download } from 'lucide-react'
+import { Download, Mail } from 'lucide-react'
 import { jsPDF } from 'jspdf'
 
 import type { SummaryPayload } from '@/hooks/summary'
 import { Button } from '@/components/ui/button'
+import { summariesToText } from '@/lib/share'
 
 type SharePopupProps = {
   isOpen: boolean
@@ -65,8 +66,17 @@ const downloadSummariesAsPdf = (summaries: SummaryPayload[]) => {
   pdf.save(`marketbuddy-summaries-${Date.now()}.pdf`)
 }
 
-export function SharePopup({ isOpen, onClose, summaries }: SharePopupProps) {
+export function SharePopup({ isOpen, onClose, summaries, userEmail }: SharePopupProps) {
   if (!isOpen) return null
+
+  const handleEmailShare = () => {
+    if (!userEmail || summaries.length === 0) return
+
+    const subject = encodeURIComponent('MarketBuddy summaries')
+    const body = encodeURIComponent(`Hi,\n\nHere are the summaries from MarketBuddy:\n\n${summariesToText(summaries)}`)
+
+    window.location.href = `mailto:${encodeURIComponent(userEmail)}?subject=${subject}&body=${body}`
+  }
 
   const handleExportPdf = () => {
     if (summaries.length === 0) return
@@ -90,6 +100,11 @@ export function SharePopup({ isOpen, onClose, summaries }: SharePopupProps) {
         </div>
 
         <div className="grid gap-3 md:grid-cols-3">
+          <Button variant="outline" className="justify-start gap-2" onClick={handleEmailShare} disabled={!userEmail || summaries.length === 0}>
+            <Mail className="h-4 w-4" />
+            Share to email
+          </Button>
+
           <Button variant="outline" className="justify-start gap-2" onClick={handleExportPdf} disabled={summaries.length === 0}>
             <Download className="h-4 w-4" />
             Export PDF
