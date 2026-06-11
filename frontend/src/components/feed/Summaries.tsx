@@ -6,10 +6,11 @@ type Props = {
   summaries: SummaryPayload[];
   isFetching: boolean;
   onFetchSummaries: () => Promise<void>;
+  onShareSummaries: () => void;
   disableFetch: boolean;
 };
 
-const Summaries = ({ summaries, isFetching, onFetchSummaries, disableFetch }: Props) => {
+const Summaries = ({ summaries, isFetching, onFetchSummaries, onShareSummaries, disableFetch }: Props) => {
 
   return (
     <div className="mt-8 whitespace-pre-line text-gray-300">
@@ -24,12 +25,22 @@ const Summaries = ({ summaries, isFetching, onFetchSummaries, disableFetch }: Pr
           </p>
         </div>
 
-        <Button
-          onClick={onFetchSummaries}
-          disabled={isFetching || disableFetch}
-        >
-          {isFetching ? "Generating..." : "Generate Summary"}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={onShareSummaries}
+            disabled={summaries.length === 0}
+          >
+            Share Summaries
+          </Button>
+
+          <Button
+            onClick={onFetchSummaries}
+            disabled={isFetching || disableFetch}
+          >
+            {isFetching ? "Generating..." : "Generate Summary"}
+          </Button>
+        </div>
       </div>
 
       {summaries.length === 0 ? (
