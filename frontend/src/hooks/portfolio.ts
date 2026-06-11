@@ -19,7 +19,7 @@ const findStockInPortfolio = async (portfolioId: number, ticker: string) => {
     company_name: tradeStock[0].stocks.company_name,
     quantity: totalQuantity,
     average_price: averagePrice,
-    profit_loss: averagePrice - (tradeStock[0].stocks.current_price || 0),
+    profit_loss: (tradeStock[0].stocks.current_price || 0) - averagePrice,
     open_price: tradeStock[0].stocks.open_price,
     current_price: tradeStock[0].stocks.current_price,
   };
@@ -36,6 +36,7 @@ const fetchStocks = async () => {
     const portfolioStocks = await Promise.all(stocks.map(stock => findStockInPortfolio(p.id, stock.ticker)))
 
     portfoliolist.push({
+      id: p.id,
       name: p.name,
       stocks: portfolioStocks
     })

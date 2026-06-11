@@ -124,10 +124,7 @@ const Home = () => {
 
                 {selectedView !== 'watchlist' && selectedPortfolio && (
                   <>
-                    <PortfolioHeader
-                      isAdding={isAdding}
-                      setIsAdding={setIsAdding}
-                    />
+                    <PortfolioHeader portfolioId={selectedPortfolio.id} />
                     <PortfoliolistTable portfolio={selectedPortfolio} />
                   </>
                 )}
