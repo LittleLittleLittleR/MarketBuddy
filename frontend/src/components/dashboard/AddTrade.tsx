@@ -93,16 +93,16 @@ export function AddTradePopup({ isOpen, onClose, portfolioId }: AddTradePopupPro
           <Input
             type="number"
             placeholder="Quantity"
-            className="w-full border p-2 mb-4"
+            className="w-full border p-2 mb-4 no-spinner"
             value={inputQuantity}
-            onChange={(e) => setInputQuantity(Number(e.target.value))}
-          />
+            onChange={(e) => setInputQuantity(e.target.value === '' ? '' : Number(e.target.value))}
+          />     
           <Input
             type="number"
             placeholder="Price"
-            className="w-full border p-2 mb-4"
+            className="w-full border p-2 mb-4 no-spinner"
             value={inputPrice}
-            onChange={(e) => setInputPrice(Number(e.target.value))}
+            onChange={(e) => setInputPrice(e.target.value === '' ? '' : Number(e.target.value))}
           />
           <Input
             type="date"
