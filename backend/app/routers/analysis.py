@@ -41,7 +41,7 @@ async def analyse_stocks(
         links = await service.fetch_news_links(ticker=ticker)
         if not links:
             logger.warning("HTTPException for: ", ticker)
-            return f"No news for the last 24 hours for {ticker}"
+            return {"ticker": ticker.upper(), "summary": f"No news for the last 24 hours for {ticker}"}
 
         context = "\n".join([f"[{a.title}: {a.snippet}" for a in links])
 

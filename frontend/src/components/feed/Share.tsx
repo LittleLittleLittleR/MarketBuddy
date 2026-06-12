@@ -3,7 +3,8 @@ import { jsPDF } from 'jspdf'
 
 import type { SummaryPayload } from '@/hooks/summary'
 import { Button } from '@/components/ui/button'
-import { summariesToText } from '@/lib/share'
+import { formatSummaryHtmlList, stripMarkdown } from '@/lib/share'
+import { supabase } from '@/lib/supabase'
 
 type SharePopupProps = {
   isOpen: boolean
@@ -11,8 +12,6 @@ type SharePopupProps = {
   summaries: SummaryPayload[]
   userEmail: string
 }
-
-const stripMarkdown = (value: string) => value.replace(/\*\*(.*?)\*\*/g, '$1')
 
 const downloadSummariesAsPdf = (summaries: SummaryPayload[]) => {
   const pdf = new jsPDF()
@@ -67,15 +66,37 @@ const downloadSummariesAsPdf = (summaries: SummaryPayload[]) => {
 }
 
 export function SharePopup({ isOpen, onClose, summaries, userEmail }: SharePopupProps) {
+
   if (!isOpen) return null
 
-  const handleEmailShare = () => {
+  const handleEmailShare = async () => {
     if (!userEmail || summaries.length === 0) return
 
-    const subject = encodeURIComponent('MarketBuddy summaries')
-    const body = encodeURIComponent(`Hi,\n\nHere are the summaries from MarketBuddy:\n\n${summariesToText(summaries)}`)
+    const body = formatSummaryHtmlList(summaries.map(s => `**${s.ticker}**\n${s.summary}`).join('\n\n'))
+    const html = `
+      <h1>MarketBuddy Summaries</h1>
+      <p>Here are the summaries you generated with MarketBuddy:</p>
+      <div>${body}</div>
+    `
+  
+    try {
+      const { error } = await supabase.functions.invoke(
+        'resend-email',
+        {
+          body: {
+            to: userEmail,
+            subject: 'Your MarketBuddy Summaries',
+            html,
+          },
+        }
+      )
 
-    window.location.href = `mailto:${encodeURIComponent(userEmail)}?subject=${subject}&body=${body}`
+      if (error) throw error
+  
+      alert('Email sent!')
+    } catch (err: any) {
+      console.error("Error sending email:", err)
+    }
   }
 
   const handleExportPdf = () => {
@@ -99,7 +120,7 @@ export function SharePopup({ isOpen, onClose, summaries, userEmail }: SharePopup
           </Button>
         </div>
 
-        <div className="grid gap-3 md:grid-cols-3">
+        <div className="grid gap-3 md:grid-cols-2">
           <Button variant="outline" className="justify-start gap-2" onClick={handleEmailShare} disabled={!userEmail || summaries.length === 0}>
             <Mail className="h-4 w-4" />
             Share to email
