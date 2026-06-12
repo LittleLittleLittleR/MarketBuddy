@@ -94,8 +94,12 @@ export function SharePopup({ isOpen, onClose, summaries, userEmail }: SharePopup
       if (error) throw error
   
       alert('Email sent!')
-    } catch (err: any) {
-      console.error("Error sending email:", err)
+    } catch (err) {
+      if (err instanceof Error) {
+        console.error("Error sending email:", err.message)
+      } else {
+        console.error("An unknown error occurred while sending email:", err)
+      }
     }
   }
 
