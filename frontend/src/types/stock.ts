@@ -34,8 +34,15 @@ export interface PortfoliolistStockDisplay {
 }
 
 export interface PortfolioListDisplay {
+  id: number;
   name: string;
   stocks: PortfoliolistStockDisplay[];
+}
+
+export interface PortfolioNames {
+  id: number;
+  name: string;
+  created_at: string;
 }
 
 export interface RawStocklistStock {

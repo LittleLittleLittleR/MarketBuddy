@@ -162,7 +162,7 @@ export type Database = {
           notes: string | null
           portfolio_id: number
           quantity: number
-          side: Database["public"]["Enums"]["trade_side"] | null
+          side: Database["public"]["Enums"]["trade_side"]
           ticker: string
           trade_date: string | null
         }
@@ -174,7 +174,7 @@ export type Database = {
           notes?: string | null
           portfolio_id: number
           quantity: number
-          side?: Database["public"]["Enums"]["trade_side"] | null
+          side: Database["public"]["Enums"]["trade_side"]
           ticker: string
           trade_date?: string | null
         }
@@ -186,7 +186,7 @@ export type Database = {
           notes?: string | null
           portfolio_id?: number
           quantity?: number
-          side?: Database["public"]["Enums"]["trade_side"] | null
+          side?: Database["public"]["Enums"]["trade_side"]
           ticker?: string
           trade_date?: string | null
         }
