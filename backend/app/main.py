@@ -8,17 +8,19 @@ from fastapi import FastAPI
 from app.config import settings
 from app.dependencies.supabase_client import get_supabase
 from app.repositories.summary_repo import SummaryRepository
-from app.routers import analysis, test, tickers, websocket_router, videos
+from app.routers import analysis, test, tickers, websocket_router, videos, earnings
 from app.services.stock_analysis import StockAnalysisService
 from app.services.ticker_worker import TickerScraperService
 from app.dependencies.redis_client import get_redis
 from app.utils.time_utils import (
     get_time_to_6am,
+    get_time_to_8am,
     is_market_open,
     sg_time_now,
     seconds_until_market_open,
 )
 from app.services.websocket_manager import ws_manager
+from app.services.earnings_service import EarningsService
 from app.services.video_builder import batch_fetch_chart_data
 
 logger.remove()
@@ -158,6 +160,57 @@ async def daily_analysis_scheduler():
             logger.info("[DAILY_SCHEDULER]: Closing...")
 
 
+async def earnings_scheduler():
+    earnings_service = EarningsService(redis_client=redis_client)
+    CHUNK_SIZE = 10
+
+    while True:
+        try:
+            time_to_sleep = get_time_to_8am()
+            logger.info(f"[EARNINGS_SCHEDULER] Sleeping for {time_to_sleep}s until next cycle...")
+            await asyncio.sleep(time_to_sleep)
+
+            cursor = 0
+            all_tracked_tickers = []
+            while True:
+                cursor, raw_batch = await redis_client.sscan(
+                    "portfolio:tickers", cursor=cursor, count=1000
+                )
+                all_tracked_tickers.extend([
+                    t.decode("utf-8") if isinstance(t, bytes) else t for t in raw_batch
+                ])
+                if cursor == 0:
+                    break
+
+            if not all_tracked_tickers:
+                logger.warning("[EARNINGS_SCHEDULER] No tickers in 'portfolio:tickers'. Skipping.")
+                continue
+
+            chunks = [
+                all_tracked_tickers[i: i + CHUNK_SIZE]
+                for i in range(0, len(all_tracked_tickers), CHUNK_SIZE)
+            ]
+
+            logger.info(f"[EARNINGS_SCHEDULER] Processing {len(all_tracked_tickers)} tickers across {len(chunks)} chunks.")
+
+            for index, chunk in enumerate(chunks):
+                logger.info(f"[EARNINGS_SCHEDULER] Chunk {index + 1}/{len(chunks)}: {chunk}")
+
+                await asyncio.gather(
+                    *[earnings_service.process_ticker(t) for t in chunk],
+                    return_exceptions=True,
+                )
+                await asyncio.sleep(2)
+
+            logger.success("[EARNINGS_SCHEDULER] Daily sweep complete.")
+
+        except Exception as e:
+            logger.exception(f"[EARNINGS_SCHEDULER_ERROR]: {e}")
+            await asyncio.sleep(10)
+        finally:
+            logger.info("[EARNINGS_SCHEDULER]: Closing...")
+
+
 async def on_the_dot_clock_scheduler():
     scraper = TickerScraperService(redis_client, max_sub_batch_size=10)
 
@@ -230,13 +283,15 @@ async def on_the_dot_clock_scheduler():
 async def lifespan(app: FastAPI):
     minute_scheduler_task = asyncio.create_task(on_the_dot_clock_scheduler())
     daily_schedular_task = asyncio.create_task(daily_analysis_scheduler())
+    earnings_scheduler_task = asyncio.create_task(earnings_scheduler())
     logger.success("[LIFESPAN] Background schedulers are active")
     yield
     minute_scheduler_task.cancel()
     daily_schedular_task.cancel()
+    earnings_scheduler_task.cancel()
     try:
         await asyncio.gather(
-            minute_scheduler_task, daily_schedular_task, return_exceptions=True
+            minute_scheduler_task, daily_schedular_task, earnings_scheduler_task, return_exceptions=True
         )
     except asyncio.CancelledError:
         logger.warning("[LIFESPAN] CancelledError")
@@ -254,6 +309,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(analysis.router)
+app.include_router(earnings.router)
 app.include_router(tickers.router)
 app.include_router(websocket_router.router)
 app.include_router(videos.router)

@@ -68,3 +68,13 @@ def seconds_until_market_open() -> float:
 
     # fallback: sleep 1 hour and retry if no schedule found
     return 3600
+
+
+def get_time_to_8am():
+    SGT = zoneinfo.ZoneInfo("Asia/Singapore")
+    TARGET_TIME = time(8, 0, 0)
+    now = datetime.now(SGT)
+    target = datetime.combine(now.date(), TARGET_TIME).replace(tzinfo=SGT)
+    if now >= target:
+        target += timedelta(days=1)
+    return int((target - now).total_seconds())
