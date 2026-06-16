@@ -8,6 +8,7 @@ import type { WatchlistStockDisplay, PortfolioListDisplay } from '@/types/stock'
 
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar'
 import Summaries from '@/components/feed/Summaries'
+import { SharePopup } from '@/components/feed/Share'
 import { WatchlistHeader } from '@/components/dashboard/WatchlistHeader'
 import { PortfolioHeader } from '@/components/dashboard/PortfolioHeader'
 import { WatchlistTable } from '@/components/dashboard/WatchlistTable'
@@ -20,6 +21,8 @@ import { stockSummaryUpdater, type SummaryPayload } from '@/hooks/summary'
 
 const Home = () => {
   const [isAdding, setIsAdding] = useState(false)
+  const [isSharing, setIsSharing] = useState(false)
+  const [userEmail, setUserEmail] = useState('')
   const [selectedView, setSelectedView] = useState<string>('watchlist')
   const [activeTab, setActiveTab] = useState('dashboard')
   const [summaryList, setSummaryList] = useState<SummaryPayload[]>([])
@@ -38,6 +41,8 @@ const Home = () => {
         navigate('/login')
         return
       }
+
+      setUserEmail(user.email || '')
     }
 
     fetchUser()
@@ -139,7 +144,15 @@ const Home = () => {
             summaries={summaryList}
             isFetching={isFetchingSummaries}
             onFetchSummaries={fetchSummaries}
+            onShareSummaries={() => setIsSharing(true)}
             disableFetch={isFetchingSummaries}
+          />
+
+          <SharePopup
+            isOpen={isSharing}
+            onClose={() => setIsSharing(false)}
+            summaries={summaryList}
+            userEmail={userEmail}
           />
         </TabsContent>
 
