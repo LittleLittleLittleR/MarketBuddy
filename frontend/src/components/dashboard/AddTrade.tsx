@@ -21,7 +21,7 @@ export function AddTradePopup({ isOpen, onClose, portfolioId }: AddTradePopupPro
   const [inputPrice, setInputPrice] = useState<number | ''>('')
   const [inputDate, setInputDate] = useState(new Date().toISOString().split('T')[0])
   const [inputSide, setInputSide] = useState('buy')
-  
+
   const queryClient = useQueryClient()
 
   const addTradeMutation = useMutation({
@@ -54,16 +54,14 @@ export function AddTradePopup({ isOpen, onClose, portfolioId }: AddTradePopupPro
       side: inputSide as 'buy' | 'sell'
     }
 
-    try {
-      await addTradeMutation.mutateAsync(tradePayload)
+    await addTradeMutation.mutateAsync(tradePayload)
 
-      setInputStock('')
-      setInputQuantity('')
-      setInputPrice('')
-      setInputDate(new Date().toISOString().split('T')[0])
-      setInputSide('buy')
-      onClose()
-    }
+    setInputStock('')
+    setInputQuantity('')
+    setInputPrice('')
+    setInputDate(new Date().toISOString().split('T')[0])
+    setInputSide('buy')
+    onClose()
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
