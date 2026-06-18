@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { watchlistHooks } from '@/hooks/watchlist'
 import type { WatchlistStockDisplay, PortfolioListDisplay } from '@/types/stock'
+import type { PortfolioTradeDisplay } from '@/types/trade'
 
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar'
 import Summaries from '@/components/feed/Summaries'
@@ -13,11 +14,14 @@ import { WatchlistHeader } from '@/components/dashboard/WatchlistHeader'
 import { PortfolioHeader } from '@/components/dashboard/PortfolioHeader'
 import { WatchlistTable } from '@/components/dashboard/WatchlistTable'
 import { PortfoliolistTable } from '@/components/dashboard/PortfoliolistTable'
+import { TradeTable } from '@/components/dashboard/TradeTable'
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { SidebarProvider } from '@/components/ui/sidebar'
+
 import { portfolioHooks } from '@/hooks/portfolio'
 import { stockSummaryUpdater, type SummaryPayload } from '@/hooks/summary'
+import { tradeHooks } from '@/hooks/trade'
 
 const Home = () => {
   const [isAdding, setIsAdding] = useState(false)
@@ -78,6 +82,19 @@ const Home = () => {
 
   const selectedPortfolio = portfolios.find((portfolio) => portfolio.name === selectedView)
 
+
+  // trade
+  const { data: trades = [] } = useQuery<PortfolioTradeDisplay[]>({
+    queryKey: ['tradeByPortfolio'],
+    queryFn: async () => {
+      const res = await tradeHooks.fetchTradesByPortfolio()
+      return res || []
+    },
+    staleTime: Infinity,
+  })
+
+  const selectedTrades = trades.filter((trade) => trade.name === selectedView)
+
   const fetchSummaries = useCallback(async () => {
     setIsFetchingSummaries(true)
 
@@ -130,7 +147,20 @@ const Home = () => {
                 {selectedView !== 'watchlist' && selectedPortfolio && (
                   <>
                     <PortfolioHeader portfolioId={selectedPortfolio.id} />
-                    <PortfoliolistTable portfolio={selectedPortfolio} />
+                    <Tabs>
+                      <TabsList className="w-full justify-start border-b">
+                        <TabsTrigger value="overview">Overview</TabsTrigger>
+                        <TabsTrigger value="trades">Trades</TabsTrigger>
+                      </TabsList>
+
+                      <TabsContent value="overview" className="text-muted-foreground">
+                        <PortfoliolistTable portfolio={selectedPortfolio} />
+                      </TabsContent>
+
+                      <TabsContent value="trades" className="text-muted-foreground">
+                        <TradeTable trades={selectedTrades[0] || []} />
+                      </TabsContent>
+                    </Tabs>
                   </>
                 )}
               </div>

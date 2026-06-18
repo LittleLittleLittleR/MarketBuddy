@@ -12,6 +12,7 @@ export interface TradeDisplay {
 }
 
 export interface PortfolioTradeDisplay {
+  id: number;
   name: string;
   trades: TradeDisplay[];
 }
