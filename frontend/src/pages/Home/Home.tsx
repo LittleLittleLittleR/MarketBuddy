@@ -29,6 +29,7 @@ const Home = () => {
   const [userEmail, setUserEmail] = useState('')
   const [selectedView, setSelectedView] = useState<string>('watchlist')
   const [activeTab, setActiveTab] = useState('dashboard')
+  const [portfolioTab, setPortfolioTab] = useState('overview')
   const [summaryList, setSummaryList] = useState<SummaryPayload[]>([])
   const [isFetchingSummaries, setIsFetchingSummaries] = useState(false)
 
@@ -147,8 +148,8 @@ const Home = () => {
                 {selectedView !== 'watchlist' && selectedPortfolio && (
                   <>
                     <PortfolioHeader portfolioId={selectedPortfolio.id} />
-                    <Tabs>
-                      <TabsList className="w-full justify-start border-b">
+                    <Tabs value={portfolioTab} onValueChange={setPortfolioTab} className="w-full">
+                      <TabsList className="grid w-full grid-cols-2">
                         <TabsTrigger value="overview">Overview</TabsTrigger>
                         <TabsTrigger value="trades">Trades</TabsTrigger>
                       </TabsList>

@@ -1,4 +1,3 @@
-import type { WatchlistStockDisplay } from '@/types/stock'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
@@ -17,9 +16,9 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { useMemo, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { watchlistHooks } from '@/hooks/watchlist'
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert'
 import type { PortfolioTradeDisplay, TradeDisplay } from '@/types/trade'
+import { tradeHooks } from '@/hooks/trade'
 
 type SortKey = keyof TradeDisplay
 
@@ -41,46 +40,42 @@ export function TradeTable({ trades }: TradeTableProps) {
   })
 
   const deleteMutation = useMutation({
-    mutationFn: async (ticker: string) => {
-      await watchlistHooks.deleteStock(ticker);
-      return ticker
+    mutationFn: async (tradeId: number) => {
+      await tradeHooks.deleteTrade(tradeId)
+      return tradeId
     },
-    onMutate: async (tickerToDelete) => {
+    onMutate: async (tradeIdToDelete) => {
       await queryClient.cancelQueries({
-        queryKey: ['watchlistPrices'],
+        queryKey: ['tradeByPortfolio'],
       })
-
-      const previousWatchlist = queryClient.getQueryData<WatchlistStockDisplay[]>(['watchlistPrices'])
-
+  
+      const previousTrades = queryClient.getQueryData<PortfolioTradeDisplay[]>(['tradeByPortfolio'])
+  
       queryClient.setQueryData(
-        ['watchlistPrices'],
-        (oldData: WatchlistStockDisplay[] | undefined) => {
-          return oldData
-            ? oldData.filter(stock => stock.ticker !== tickerToDelete)
-            : []
+        ['tradeByPortfolio'],
+        (oldData: PortfolioTradeDisplay[] | undefined) => {
+          if (!oldData) return []
+          return oldData.map((portfolio) =>
+            portfolio.name === trades.name
+              ? { ...portfolio, trades: portfolio.trades.filter((t) => t.id !== tradeIdToDelete) }
+              : portfolio
+          )
         }
       )
-
-      return { previousWatchlist }
+  
+      return { previousTrades }
     },
-    onSuccess: async (deletedTicker) => {
-      queryClient.setQueryData(
-        ['watchlistPrices'],
-        (oldData: WatchlistStockDisplay[] | undefined) => {
-          return oldData
-            ? oldData.filter(stock => stock.ticker !== deletedTicker)
-            : []
-        }
-      )
-      await queryClient.invalidateQueries({
-        queryKey: ['watchlistPrices'],
-      })
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['tradeByPortfolio'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolioPrices'] }),
+      ])
     },
-    onError: (err: unknown, _ticker, context) => {
-      if (context?.previousWatchlist) {
-        queryClient.setQueryData(['watchlistPrices'], context.previousWatchlist)
+    onError: (err: unknown, _tradeId, context) => {
+      if (context?.previousTrades) {
+        queryClient.setQueryData(['tradeByPortfolio'], context.previousTrades)
       }
-      console.error("Failed during delete operation for ticker: ", err)
+      console.error("Failed during delete operation for trade: ", err)
     }
   })
 
@@ -209,7 +204,7 @@ export function TradeTable({ trades }: TradeTableProps) {
                         <Button variant="ghost" className="h-8 w-8 p-0">⋮</Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => deleteMutation.mutate(trade.ticker)} className="text-red-500 cursor-pointer">
+                        <DropdownMenuItem onClick={() => deleteMutation.mutate(trade.id)} className="text-red-500 cursor-pointer">
                           Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
