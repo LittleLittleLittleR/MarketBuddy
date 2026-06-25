@@ -19,17 +19,21 @@ export function AddTradePopup({ isOpen, onClose, portfolioId }: AddTradePopupPro
   const [inputStock, setInputStock] = useState('')
   const [inputQuantity, setInputQuantity] = useState<number | ''>('')
   const [inputPrice, setInputPrice] = useState<number | ''>('')
-  const [inputDate, setInputDate] = useState(new Date().toISOString().split('T')[0]) // default today
+  const [inputDate, setInputDate] = useState(new Date().toISOString().split('T')[0])
   const [inputSide, setInputSide] = useState('buy')
-  
+
   const queryClient = useQueryClient()
 
   const addTradeMutation = useMutation({
     mutationFn: async (payload: TradeRequest) => {
       await tradeHooks.addTrade(payload)
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['portfolioPrices'] }) // invalidate querykey for repoll
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['portfolioNames'] }),
+        queryClient.invalidateQueries({ queryKey: ['portfolioPrices'] }),
+        queryClient.invalidateQueries({ queryKey: ['tradeByPortfolio'] }),
+      ])
     },
     onError: (error) => {
       console.error('Failed to add logs:', error)
@@ -37,40 +41,35 @@ export function AddTradePopup({ isOpen, onClose, portfolioId }: AddTradePopupPro
   })
 
   const handleCreateTrade = async () => {
-    if (inputStock.trim()) {
-      const trimmedStock = inputStock.trim()
-      const tradePayload: TradeRequest = {
-        portfolio_id: portfolioId,
-        ticker: trimmedStock,
-        quantity: typeof inputQuantity === 'number' ? inputQuantity : 0,
-        entry_cost: typeof inputPrice === 'number' ? inputPrice : 0,
-        fees: null,
-        notes: null,
-        trade_date: inputDate,
-        side: inputSide as 'buy' | 'sell'
-      }
-      addTradeMutation.mutate(tradePayload)
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['portfolioNames'] }),
-        queryClient.invalidateQueries({ queryKey: ['portfolioPrices'] }),
-      ])
+    if (!inputStock.trim()) return
 
-      setInputStock('')
-      setInputQuantity('')
-      setInputPrice('')
-      setInputDate(new Date().toISOString().split('T')[0])
-      setInputSide('buy')
-      onClose()
+    const tradePayload: TradeRequest = {
+      portfolio_id: portfolioId,
+      ticker: inputStock.trim(),
+      quantity: typeof inputQuantity === 'number' ? inputQuantity : 0,
+      entry_cost: typeof inputPrice === 'number' ? inputPrice : 0,
+      fees: null,
+      notes: null,
+      trade_date: inputDate,
+      side: inputSide as 'buy' | 'sell'
     }
+
+    await addTradeMutation.mutateAsync(tradePayload)
+
+    setInputStock('')
+    setInputQuantity('')
+    setInputPrice('')
+    setInputDate(new Date().toISOString().split('T')[0])
+    setInputSide('buy')
+    onClose()
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // TODO
-    console.log("Add complete")
+    await handleCreateTrade()
   }
 
-  if (!isOpen) return null;
+  if (!isOpen) return null
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -88,7 +87,7 @@ export function AddTradePopup({ isOpen, onClose, portfolioId }: AddTradePopupPro
             placeholder="Stock Ticker"
             className="w-full border p-2 mb-4"
             value={inputStock}
-            onChange={(e) => setInputStock(e.target.value)}
+            onChange={(e) => setInputStock(e.target.value.toUpperCase())}
           />
           <Input
             type="number"
@@ -125,9 +124,9 @@ export function AddTradePopup({ isOpen, onClose, portfolioId }: AddTradePopupPro
           <Button 
             className="w-full"
             type="submit" 
-            onClick={handleCreateTrade}
+            disabled={addTradeMutation.isPending}
           >
-            Create Trade
+            {addTradeMutation.isPending ? 'Creating...' : 'Create Trade'}
           </Button>
         </form>
       </div>

@@ -11,6 +11,7 @@ const fetchTradesByPortfolio = async () => {
     const trades = await tradeService.getTradesByPortfolio(p.id);
 
     portfoliotradelist.push({
+      id: p.id,
       name: p.name,
       trades: trades
     })
