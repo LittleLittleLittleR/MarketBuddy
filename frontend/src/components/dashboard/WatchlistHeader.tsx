@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { watchlistHooks } from '@/hooks/watchlist';
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useRealtimePrice } from '@/context/RealtimePriceContext'
 
 type WatchlistHeaderProps = {
   isAdding: boolean
@@ -12,6 +13,7 @@ type WatchlistHeaderProps = {
 export function WatchlistHeader({ isAdding, setIsAdding }: WatchlistHeaderProps) {
   const [newTicker, setNewTicker] = useState('')
   const queryClient = useQueryClient();
+  const { subscribeToTicker } = useRealtimePrice()
 
   const addStockMutation = useMutation({
     mutationFn: async (ticker: string) => {
@@ -20,8 +22,9 @@ export function WatchlistHeader({ isAdding, setIsAdding }: WatchlistHeaderProps)
     onMutate: () => {
       setIsAdding(true)
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['watchlistPrices'] }) // invalidate querykey for repoll
+    onSuccess: (_, ticker) => {
+      queryClient.invalidateQueries({ queryKey: ['watchlistPrices'] })
+      subscribeToTicker(ticker)
     },
     onError: (error) => {
       console.error('Failed to add stock entry:', error)

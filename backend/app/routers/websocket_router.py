@@ -3,6 +3,7 @@ import asyncio
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status
 from app.services.websocket_manager import ws_manager
 from app.services.ticker_worker import TickerScraperService
+from app.services.portfolio_digest_service import PortfolioDigestService
 from app.dependencies.supabase_client import get_supabase
 from app.dependencies.redis_client import get_redis
 from loguru import logger
@@ -53,17 +54,21 @@ async def websocket_prices_endpoint(websocket: WebSocket, token: str | None = No
 
             user_id = user_response.user.id
 
-            # pull the user's specific customized watch list tickers from your table
-            portfolio_data = (
+            # watchlist tickers
+            watchlist_data = (
                 await supabase_client.table("watchlist_stocks")
-                .select("*")
+                .select("stock_ticker")
                 .eq("user_id", user_id)
                 .execute()
             )
+            watchlist_tickers = {row["stock_ticker"].upper() for row in (watchlist_data.data or [])}
 
-            logger.debug(f"[USER {user_id}]: {portfolio_data}")
+            # open portfolio tickers (only stocks still held, using cost-basis filter)
+            digest_service = PortfolioDigestService(supabase_client)
+            open_tickers = await digest_service.get_open_tickers(user_id)
 
-            user_tickers = [row["stock_ticker"].upper() for row in portfolio_data.data]
+            user_tickers = list(watchlist_tickers | open_tickers)
+            logger.debug(f"[USER {user_id}] watchlist={watchlist_tickers} portfolio={open_tickers}")
 
         except Exception as err:
             logger.error(f"[WS_AUTH_ERROR] Auth/Portfolio initialization failed: {err}")

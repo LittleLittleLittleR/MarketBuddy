@@ -176,6 +176,44 @@ class PortfolioDigestService:
             monthly_trades=monthly_trades,
         )
 
+    async def get_open_tickers(self, user_id: str) -> set[str]:
+        portfolios_resp = (
+            await self.supabase.table("portfolios")
+            .select("id")
+            .eq("user_id", user_id)
+            .execute()
+        )
+        portfolio_ids = [p["id"] for p in (portfolios_resp.data or [])]
+        if not portfolio_ids:
+            return set()
+
+        trades_resp = (
+            await self.supabase.table("trades")
+            .select("ticker, side, quantity, entry_cost")
+            .in_("portfolio_id", portfolio_ids)
+            .order("trade_date", desc=False)
+            .execute()
+        )
+
+        ticker_qty: dict[str, float] = {}
+        ticker_cost: dict[str, float] = {}
+
+        for trade in (trades_resp.data or []):
+            ticker = trade["ticker"].upper()
+            qty = float(trade["quantity"])
+            ticker_qty.setdefault(ticker, 0.0)
+            ticker_cost.setdefault(ticker, 0.0)
+
+            if trade["side"] == "buy":
+                ticker_cost[ticker] += qty * float(trade.get("entry_cost") or 0)
+                ticker_qty[ticker] += qty
+            elif trade["side"] == "sell":
+                avg = (ticker_cost[ticker] / ticker_qty[ticker]) if ticker_qty[ticker] > 0 else 0.0
+                ticker_qty[ticker] -= qty
+                ticker_cost[ticker] = avg * ticker_qty[ticker]
+
+        return {t for t, q in ticker_qty.items() if q > 0}
+
     def _filter_monthly_trades(
         self, trades: list[dict], month: int, year: int
     ) -> list[TradeActivity]:
