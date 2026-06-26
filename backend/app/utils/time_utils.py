@@ -78,3 +78,22 @@ def get_time_to_8am():
     if now >= target:
         target += timedelta(days=1)
     return int((target - now).total_seconds())
+
+
+def get_time_to_1st_of_month_9am() -> int:
+    """Returns seconds until 9:00 AM SGT on the 1st of the next trigger month."""
+    SGT = zoneinfo.ZoneInfo("Asia/Singapore")
+    now = datetime.now(SGT)
+
+    # If we haven't yet passed this month's 1st at 9am, wait until then
+    first_this_month = datetime(now.year, now.month, 1, 9, 0, 0, tzinfo=SGT)
+    if now < first_this_month:
+        return int((first_this_month - now).total_seconds())
+
+    # Otherwise wait until the 1st of next month
+    if now.month == 12:
+        next_first = datetime(now.year + 1, 1, 1, 9, 0, 0, tzinfo=SGT)
+    else:
+        next_first = datetime(now.year, now.month + 1, 1, 9, 0, 0, tzinfo=SGT)
+
+    return int((next_first - now).total_seconds())

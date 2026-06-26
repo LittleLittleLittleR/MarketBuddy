@@ -1,4 +1,8 @@
+from datetime import datetime
+
 from fastapi import APIRouter, Depends
+from pydantic import BaseModel
+
 from app.services.websocket_manager import ws_manager
 from app.services.stock_analysis import StockAnalysisService
 from app.dependencies import get_stock_service
@@ -10,6 +14,8 @@ from app.dependencies.supabase_client import get_supabase
 from app.repositories.summary_repo import SummaryRepository
 from app.dependencies.s3_client import get_presigned_url
 from app.services.earnings_service import EarningsService
+from app.services.portfolio_digest_service import PortfolioDigestService
+from app.services.email_service import send_monthly_digest
 
 router = APIRouter(prefix="/api/test", tags=["dev-testing"])
 redis_client = get_redis()
@@ -267,3 +273,76 @@ async def get_all_videos():
             payload[ticker.upper()] = signed_url
 
     return payload
+
+
+class DigestTestRequest(BaseModel):
+    user_id: str
+    month: int
+    year: int
+
+
+@router.post("/send-monthly-digest")
+async def test_send_monthly_digest(body: DigestTestRequest):
+    """Immediately builds and sends the monthly digest email for a given user.
+    Does NOT go through the job queue — fires instantly for testing."""
+    supabase = await get_supabase()
+
+    user_resp = await supabase.auth.admin.get_user_by_id(body.user_id)
+    user_email = user_resp.user.email if user_resp.user else None
+    if not user_email:
+        return {"status": "error", "detail": "user not found or has no email"}
+
+    digest_service = PortfolioDigestService(supabase)
+    digest = await digest_service.build_digest(body.user_id, body.month, body.year)
+    month_label = datetime(body.year, body.month, 1).strftime("%B %Y")
+
+    await send_monthly_digest(user_email, digest, month_label, body.user_id)
+    logger.success(f"[TEST] Sent monthly digest to {user_email} for {month_label}")
+
+    return {
+        "status": "sent",
+        "to": user_email,
+        "month_label": month_label,
+        "total_value": digest.total_value,
+        "total_pnl": digest.total_pnl,
+        "positions_count": len(digest.positions),
+        "monthly_trades_count": len(digest.monthly_trades),
+    }
+
+
+@router.get("/preview-digest/{user_id}")
+async def test_preview_digest(user_id: str, month: int, year: int):
+    """Returns the digest payload for a user without sending any email.
+    Use this to verify the data before committing to a send."""
+    supabase = await get_supabase()
+    digest_service = PortfolioDigestService(supabase)
+    digest = await digest_service.build_digest(user_id, month, year)
+
+    return {
+        "total_value": digest.total_value,
+        "total_pnl": digest.total_pnl,
+        "positions": [
+            {
+                "ticker": p.ticker,
+                "company_name": p.company_name,
+                "quantity": p.quantity,
+                "avg_price": p.avg_price,
+                "current_price": p.current_price,
+                "pnl_per_share": p.pnl_per_share,
+                "total_pnl": p.total_pnl,
+                "pnl_pct": p.pnl_pct,
+                "has_ai_insight": p.ai_insight is not None,
+            }
+            for p in digest.positions
+        ],
+        "monthly_trades": [
+            {
+                "date": t.date,
+                "side": t.side,
+                "ticker": t.ticker,
+                "quantity": t.quantity,
+                "price": t.price,
+            }
+            for t in digest.monthly_trades
+        ],
+    }

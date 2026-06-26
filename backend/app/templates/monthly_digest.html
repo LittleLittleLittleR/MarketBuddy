@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MarketBuddy — {{ month_label }}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#0f1117;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+
+  <!-- Outer wrapper -->
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#0f1117;">
+    <tr>
+      <td align="center" style="padding:32px 16px;">
+
+        <!-- Card -->
+        <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background-color:#161b27;border-radius:12px;overflow:hidden;">
+
+          <!-- ── Header ── -->
+          <tr>
+            <td style="padding:32px 36px 24px;border-bottom:1px solid #1e2535;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td>
+                    <span style="font-size:20px;font-weight:700;color:#ffffff;letter-spacing:-0.3px;">MarketBuddy</span>
+                  </td>
+                  <td align="right">
+                    <span style="font-size:13px;color:#6b7280;">Monthly Summary</span>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:12px 0 0;font-size:26px;font-weight:700;color:#ffffff;letter-spacing:-0.5px;">
+                {{ month_label }}
+              </p>
+              <p style="margin:4px 0 0;font-size:14px;color:#6b7280;">Your portfolio performance at a glance</p>
+            </td>
+          </tr>
+
+          <!-- ── Summary Row ── -->
+          <tr>
+            <td style="padding:24px 36px;border-bottom:1px solid #1e2535;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <!-- Total Value -->
+                  <td width="50%" style="padding-right:12px;">
+                    <div style="background-color:#1e2535;border-radius:8px;padding:20px;">
+                      <p style="margin:0;font-size:12px;color:#6b7280;text-transform:uppercase;letter-spacing:0.8px;">Total Value</p>
+                      <p style="margin:8px 0 0;font-size:24px;font-weight:700;color:#ffffff;">
+                        {% if digest.total_value %}
+                          ${{ "%.2f"|format(digest.total_value) }}
+                        {% else %}
+                          —
+                        {% endif %}
+                      </p>
+                    </div>
+                  </td>
+                  <!-- Total P&L -->
+                  <td width="50%" style="padding-left:12px;">
+                    <div style="background-color:#1e2535;border-radius:8px;padding:20px;">
+                      <p style="margin:0;font-size:12px;color:#6b7280;text-transform:uppercase;letter-spacing:0.8px;">Total P&amp;L</p>
+                      {% if digest.total_pnl is not none %}
+                        {% set pnl_color = "#22c55e" if digest.total_pnl >= 0 else "#ef4444" %}
+                        {% set pnl_sign = "+" if digest.total_pnl >= 0 else "" %}
+                        <p style="margin:8px 0 0;font-size:24px;font-weight:700;color:{{ pnl_color }};">
+                          {{ pnl_sign }}${{ "%.2f"|format(digest.total_pnl) }}
+                        </p>
+                      {% else %}
+                        <p style="margin:8px 0 0;font-size:24px;font-weight:700;color:#6b7280;">—</p>
+                      {% endif %}
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- ── Holdings ── -->
+          <tr>
+            <td style="padding:24px 36px;border-bottom:1px solid #1e2535;">
+              <p style="margin:0 0 16px;font-size:16px;font-weight:600;color:#ffffff;">Current Holdings</p>
+
+              {% if digest.positions %}
+                <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+                  <!-- Table header -->
+                  <tr style="background-color:#1e2535;">
+                    <td style="padding:10px 12px;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.7px;border-radius:6px 0 0 6px;">Ticker</td>
+                    <td style="padding:10px 8px;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.7px;">Qty</td>
+                    <td style="padding:10px 8px;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.7px;">Avg Cost</td>
+                    <td style="padding:10px 8px;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.7px;">Price</td>
+                    <td style="padding:10px 8px;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.7px;">P&amp;L</td>
+                    <td style="padding:10px 12px;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.7px;border-radius:0 6px 6px 0;" align="right">%</td>
+                  </tr>
+
+                  {% for pos in digest.positions %}
+                  {% set row_bg = "#161b27" if loop.index is odd else "#1a2030" %}
+                  <tr style="background-color:{{ row_bg }};">
+                    <td style="padding:14px 12px;border-bottom:1px solid #1e2535;">
+                      <span style="font-size:14px;font-weight:700;color:#ffffff;">{{ pos.ticker }}</span><br/>
+                      <span style="font-size:11px;color:#6b7280;">{{ pos.company_name }}</span>
+                    </td>
+                    <td style="padding:14px 8px;font-size:13px;color:#d1d5db;border-bottom:1px solid #1e2535;">
+                      {{ "%.4g"|format(pos.quantity) }}
+                    </td>
+                    <td style="padding:14px 8px;font-size:13px;color:#d1d5db;border-bottom:1px solid #1e2535;">
+                      ${{ "%.2f"|format(pos.avg_price) }}
+                    </td>
+                    <td style="padding:14px 8px;font-size:13px;color:#d1d5db;border-bottom:1px solid #1e2535;">
+                      {% if pos.current_price is not none %}
+                        ${{ "%.2f"|format(pos.current_price) }}
+                      {% else %}
+                        <span style="color:#6b7280;">N/A</span>
+                      {% endif %}
+                    </td>
+                    <td style="padding:14px 8px;font-size:13px;border-bottom:1px solid #1e2535;">
+                      {% if pos.total_pnl is not none %}
+                        {% set pnl_col = "#22c55e" if pos.total_pnl >= 0 else "#ef4444" %}
+                        {% set pnl_sign = "+" if pos.total_pnl >= 0 else "" %}
+                        <span style="color:{{ pnl_col }};">{{ pnl_sign }}${{ "%.2f"|format(pos.total_pnl) }}</span>
+                      {% else %}
+                        <span style="color:#6b7280;">—</span>
+                      {% endif %}
+                    </td>
+                    <td style="padding:14px 12px;font-size:13px;font-weight:600;border-bottom:1px solid #1e2535;" align="right">
+                      {% if pos.pnl_pct is not none %}
+                        {% set pct_col = "#22c55e" if pos.pnl_pct >= 0 else "#ef4444" %}
+                        {% set pct_sign = "+" if pos.pnl_pct >= 0 else "" %}
+                        <span style="color:{{ pct_col }};">{{ pct_sign }}{{ "%.2f"|format(pos.pnl_pct) }}%</span>
+                      {% else %}
+                        <span style="color:#6b7280;">—</span>
+                      {% endif %}
+                    </td>
+                  </tr>
+
+                  {% if pos.ai_insight %}
+                  <tr style="background-color:{{ row_bg }};">
+                    <td colspan="6" style="padding:0 12px 14px;border-bottom:1px solid #1e2535;">
+                      <div style="background-color:#0f1117;border-left:3px solid #3b82f6;border-radius:0 4px 4px 0;padding:10px 12px;">
+                        <p style="margin:0;font-size:12px;color:#93c5fd;font-weight:600;margin-bottom:4px;">Insight</p>
+                        <p style="margin:0;font-size:12px;color:#9ca3af;line-height:1.5;">{{ pos.ai_insight[:280] }}{% if pos.ai_insight|length > 280 %}…{% endif %}</p>
+                      </div>
+                    </td>
+                  </tr>
+                  {% endif %}
+
+                  {% endfor %}
+                </table>
+
+              {% else %}
+                <div style="background-color:#1e2535;border-radius:8px;padding:32px;text-align:center;">
+                  <p style="margin:0;font-size:14px;color:#6b7280;">You have no open positions this month.</p>
+                </div>
+              {% endif %}
+            </td>
+          </tr>
+
+          <!-- ── Monthly Activity ── -->
+          {% if digest.monthly_trades %}
+          <tr>
+            <td style="padding:24px 36px;border-bottom:1px solid #1e2535;">
+              <p style="margin:0 0 16px;font-size:16px;font-weight:600;color:#ffffff;">This Month's Activity</p>
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+                <tr style="background-color:#1e2535;">
+                  <td style="padding:10px 12px;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.7px;border-radius:6px 0 0 6px;">Date</td>
+                  <td style="padding:10px 8px;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.7px;">Side</td>
+                  <td style="padding:10px 8px;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.7px;">Ticker</td>
+                  <td style="padding:10px 8px;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.7px;">Qty</td>
+                  <td style="padding:10px 12px;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.7px;border-radius:0 6px 6px 0;" align="right">Price</td>
+                </tr>
+                {% for trade in digest.monthly_trades %}
+                {% set row_bg = "#161b27" if loop.index is odd else "#1a2030" %}
+                <tr style="background-color:{{ row_bg }};">
+                  <td style="padding:12px 12px;font-size:13px;color:#9ca3af;border-bottom:1px solid #1e2535;">{{ trade.date }}</td>
+                  <td style="padding:12px 8px;border-bottom:1px solid #1e2535;">
+                    {% if trade.side == "buy" %}
+                      <span style="font-size:11px;font-weight:700;color:#22c55e;background-color:#14281f;padding:3px 8px;border-radius:4px;text-transform:uppercase;letter-spacing:0.5px;">BUY</span>
+                    {% else %}
+                      <span style="font-size:11px;font-weight:700;color:#ef4444;background-color:#2d1414;padding:3px 8px;border-radius:4px;text-transform:uppercase;letter-spacing:0.5px;">SELL</span>
+                    {% endif %}
+                  </td>
+                  <td style="padding:12px 8px;font-size:13px;font-weight:700;color:#ffffff;border-bottom:1px solid #1e2535;">{{ trade.ticker }}</td>
+                  <td style="padding:12px 8px;font-size:13px;color:#d1d5db;border-bottom:1px solid #1e2535;">{{ "%.4g"|format(trade.quantity) }}</td>
+                  <td style="padding:12px 12px;font-size:13px;color:#d1d5db;border-bottom:1px solid #1e2535;" align="right">${{ "%.2f"|format(trade.price) }}</td>
+                </tr>
+                {% endfor %}
+              </table>
+            </td>
+          </tr>
+          {% endif %}
+
+          <!-- ── Footer ── -->
+          <tr>
+            <td style="padding:24px 36px;text-align:center;">
+              <p style="margin:0;font-size:12px;color:#4b5563;line-height:1.6;">
+                You're receiving this because monthly portfolio summaries are enabled.<br/>
+                <a href="https://marketbuddy.app/api/email/unsubscribe?token={{ unsubscribe_token }}"
+                   style="color:#6b7280;text-decoration:underline;">Unsubscribe</a>
+              </p>
+            </td>
+          </tr>
+
+        </table>
+        <!-- end card -->
+
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

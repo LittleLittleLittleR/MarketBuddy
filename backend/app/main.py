@@ -8,13 +8,14 @@ from fastapi import FastAPI
 from app.config import settings
 from app.dependencies.supabase_client import get_supabase
 from app.repositories.summary_repo import SummaryRepository
-from app.routers import analysis, test, tickers, websocket_router, videos, earnings
+from app.routers import analysis, test, tickers, websocket_router, videos, earnings, email_admin
 from app.services.stock_analysis import StockAnalysisService
 from app.services.ticker_worker import TickerScraperService
 from app.dependencies.redis_client import get_redis
 from app.utils.time_utils import (
     get_time_to_6am,
     get_time_to_8am,
+    get_time_to_1st_of_month_9am,
     is_market_open,
     sg_time_now,
     seconds_until_market_open,
@@ -22,6 +23,10 @@ from app.utils.time_utils import (
 from app.services.websocket_manager import ws_manager
 from app.services.earnings_service import EarningsService
 from app.services.video_builder import batch_fetch_chart_data
+from app.services.portfolio_digest_service import PortfolioDigestService
+from app.services.email_service import send_monthly_digest
+from app.repositories.email_job_repo import EmailJobRepository
+from datetime import datetime, timezone
 
 logger.remove()
 
@@ -279,19 +284,116 @@ async def on_the_dot_clock_scheduler():
             await asyncio.sleep(1)
 
 
+async def monthly_digest_scheduler():
+    supabase = await get_supabase()
+    repo = EmailJobRepository(supabase)
+
+    while True:
+        try:
+            sleep_secs = get_time_to_1st_of_month_9am()
+            logger.info(f"[DIGEST_SCHEDULER] Sleeping {sleep_secs}s until 1st of month 9am SGT")
+            await asyncio.sleep(sleep_secs)
+
+            now = sg_time_now()
+            month, year = now.month, now.year
+
+            # List all users; those with no email_preferences row are opted-in by default
+            all_users = await supabase.auth.admin.list_users()
+            all_user_ids = [u.id for u in (all_users if isinstance(all_users, list) else [])]
+
+            # Remove users who explicitly opted out
+            prefs_resp = (
+                await supabase.table("email_preferences")
+                .select("user_id")
+                .eq("monthly_digest_enabled", False)
+                .execute()
+            )
+            opted_out = {row["user_id"] for row in (prefs_resp.data or [])}
+            opted_in_ids = [uid for uid in all_user_ids if uid not in opted_out]
+
+            jobs_created = await repo.create_jobs_for_month(opted_in_ids, month, year)
+            logger.info(f"[DIGEST_SCHEDULER] Created {jobs_created} jobs for {month}/{year}")
+
+        except Exception as e:
+            logger.exception(f"[DIGEST_SCHEDULER_ERROR]: {e}")
+            await asyncio.sleep(60)
+        finally:
+            logger.info("[DIGEST_SCHEDULER]: Closing...")
+
+
+async def _process_email_job(job: dict, supabase, repo: EmailJobRepository, digest_service: PortfolioDigestService) -> None:
+    job_id: int = job["id"]
+    user_id: str = job["user_id"]
+    month: int = job["month"]
+    year: int = job["year"]
+    retry_count: int = job["retry_count"]
+    month_label = datetime(year, month, 1).strftime("%B %Y")
+
+    try:
+        user_resp = await supabase.auth.admin.get_user_by_id(user_id)
+        user_email: str | None = user_resp.user.email
+        if not user_email:
+            logger.warning(f"[EMAIL] Skipping job_id={job_id}: user_id={user_id} has no email address")
+            await repo.mark_failed(job_id, "user has no email address", retry_count)
+            return
+
+        digest = await digest_service.build_digest(user_id, month, year)
+        await send_monthly_digest(user_email, digest, month_label, user_id)
+
+        await repo.mark_sent(job_id, datetime.now(timezone.utc))
+        logger.info(f"[EMAIL] Sent to user_id={user_id}")
+
+    except Exception as e:
+        logger.error(f"[EMAIL] Failed job_id={job_id}: {e}")
+        await repo.mark_failed(job_id, str(e), retry_count)
+
+
+async def email_job_queue_worker():
+    supabase = await get_supabase()
+    repo = EmailJobRepository(supabase)
+    digest_service = PortfolioDigestService(supabase)
+
+    logger.info("[EMAIL_WORKER] Starting...")
+    while True:
+        try:
+            await asyncio.sleep(30)
+            jobs = await repo.fetch_pending_batch(limit=20)
+            if not jobs:
+                continue
+
+            logger.info(f"[EMAIL_WORKER] Processing {len(jobs)} pending jobs")
+            await asyncio.gather(
+                *[_process_email_job(j, supabase, repo, digest_service) for j in jobs],
+                return_exceptions=True,
+            )
+
+        except Exception as e:
+            logger.exception(f"[EMAIL_WORKER_ERROR]: {e}")
+            await asyncio.sleep(10)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     minute_scheduler_task = asyncio.create_task(on_the_dot_clock_scheduler())
     daily_schedular_task = asyncio.create_task(daily_analysis_scheduler())
     earnings_scheduler_task = asyncio.create_task(earnings_scheduler())
+    digest_scheduler_task = asyncio.create_task(monthly_digest_scheduler())
+    email_worker_task = asyncio.create_task(email_job_queue_worker())
     logger.success("[LIFESPAN] Background schedulers are active")
     yield
     minute_scheduler_task.cancel()
     daily_schedular_task.cancel()
     earnings_scheduler_task.cancel()
+    digest_scheduler_task.cancel()
+    email_worker_task.cancel()
     try:
         await asyncio.gather(
-            minute_scheduler_task, daily_schedular_task, earnings_scheduler_task, return_exceptions=True
+            minute_scheduler_task,
+            daily_schedular_task,
+            earnings_scheduler_task,
+            digest_scheduler_task,
+            email_worker_task,
+            return_exceptions=True,
         )
     except asyncio.CancelledError:
         logger.warning("[LIFESPAN] CancelledError")
@@ -314,6 +416,7 @@ app.include_router(tickers.router)
 app.include_router(websocket_router.router)
 app.include_router(videos.router)
 app.include_router(test.router)
+app.include_router(email_admin.router)
 
 
 @app.get("/")
