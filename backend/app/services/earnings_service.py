@@ -1,11 +1,14 @@
 import asyncio
 import json
 from datetime import datetime, date
+from typing import Optional
 import zoneinfo
 
 import yfinance as yf
 from upstash_redis.asyncio import Redis
+from supabase import AsyncClient
 from loguru import logger
+from app.repositories.earnings_repo import EarningsRepository
 
 ET = zoneinfo.ZoneInfo("America/New_York")
 SGT = zoneinfo.ZoneInfo("Asia/Singapore")
@@ -98,18 +101,30 @@ def _fetch_earnings_data(ticker: str) -> dict:
 
 
 class EarningsService:
-    def __init__(self, redis_client: Redis):
+    def __init__(self, redis_client: Redis, supabase: Optional[AsyncClient] = None):
         self.redis_client = redis_client
+        self._repo = EarningsRepository(supabase) if supabase else None
 
     async def fetch_and_store(self, ticker: str) -> dict:
         data = await asyncio.to_thread(_fetch_earnings_data, ticker)
         await self.redis_client.set(_redis_key(ticker), json.dumps(data))
-        logger.info(f"[earnings] stored {ticker}")
+        logger.info(f"[earnings] stored {ticker} in Redis")
+
+        if self._repo:
+            await self._repo.upsert_earnings(data)
+
         return data
 
     async def get_from_cache(self, ticker: str) -> dict | None:
         raw = await self.redis_client.get(_redis_key(ticker))
-        return json.loads(raw) if raw else None
+        if raw:
+            return json.loads(raw)
+
+        if self._repo:
+            logger.info(f"[earnings] Redis miss for {ticker}, checking Supabase")
+            return await self._repo.get_earnings(ticker)
+
+        return None
 
     async def process_ticker(self, ticker: str) -> None:
         try:
@@ -117,7 +132,10 @@ class EarningsService:
             if cached is None:
                 logger.info(f"[earnings] no cache for {ticker} — initial fetch")
                 await self.fetch_and_store(ticker)
-            elif cached.get("earnings_date") and date.fromisoformat(cached["earnings_date"]) == _today_et():
+            elif (
+                cached.get("earnings_date")
+                and date.fromisoformat(cached["earnings_date"]) == _today_et()
+            ):
                 logger.info(f"[earnings] earnings day for {ticker} — fetching actuals")
                 await self.fetch_and_store(ticker)
             else:

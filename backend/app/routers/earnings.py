@@ -3,13 +3,15 @@ from loguru import logger
 
 from app.dependencies.auth import get_current_user
 from app.dependencies.redis_client import get_redis
+from app.dependencies.supabase_client import get_supabase
 from app.services.earnings_service import EarningsService
 
 router = APIRouter(prefix="/api/earnings", tags=["earnings"])
 
 
-def get_earnings_service() -> EarningsService:
-    return EarningsService(redis_client=get_redis())
+async def get_earnings_service() -> EarningsService:
+    supabase = await get_supabase()
+    return EarningsService(redis_client=get_redis(), supabase=supabase)
 
 
 @router.get("")

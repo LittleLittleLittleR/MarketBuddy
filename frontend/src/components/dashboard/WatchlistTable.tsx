@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { useMemo, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import { watchlistHooks } from '@/hooks/watchlist'
 import { useRealtimePrice } from '@/context/RealtimePriceContext'
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert'
@@ -35,6 +36,7 @@ type WatchlistTableProps = {
 export function WatchlistTable({ stocks }: WatchlistTableProps) {
   const { status } = useRealtimePrice();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const [sortConfig, setSortConfig] = useState<SortConfig>({
     key: null,
@@ -191,7 +193,11 @@ export function WatchlistTable({ stocks }: WatchlistTableProps) {
             </TableHeader>
             <TableBody>
               {sortedData.map((stock) => (
-                <TableRow key={stock.ticker}>
+                <TableRow
+                  key={stock.ticker}
+                  className="cursor-pointer hover:bg-muted/40 transition-colors"
+                  onClick={() => navigate(`/stock/${stock.ticker}`)}
+                >
                   <TableCell className="font-medium text-center">{stock.ticker}</TableCell>
                   <TableCell className="text-center">{stock.company_name}</TableCell>
                   <TableCell className="text-center">
@@ -206,7 +212,7 @@ export function WatchlistTable({ stocks }: WatchlistTableProps) {
                     {stock.change_percent !== null && stock.change_percent >= 0 ? '+' : ''}
                     {stock.change_percent !== null ? `${stock.change_percent.toFixed(2)}%` : 'N/A'}
                   </TableCell>
-                  <TableCell className="text-center">
+                  <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" className="h-8 w-8 p-0">⋮</Button>

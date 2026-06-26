@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from app.config import settings
 from app.dependencies.supabase_client import get_supabase
 from app.repositories.summary_repo import SummaryRepository
-from app.routers import analysis, test, tickers, websocket_router, videos, earnings, email_admin
+from app.routers import analysis, test, tickers, websocket_router, videos, earnings, email_admin, candles
 from app.services.stock_analysis import StockAnalysisService
 from app.services.ticker_worker import TickerScraperService
 from app.dependencies.redis_client import get_redis
@@ -166,7 +166,8 @@ async def daily_analysis_scheduler():
 
 
 async def earnings_scheduler():
-    earnings_service = EarningsService(redis_client=redis_client)
+    supabase_client = await get_supabase()
+    earnings_service = EarningsService(redis_client=redis_client, supabase=supabase_client)
     CHUNK_SIZE = 10
 
     while True:
@@ -413,6 +414,7 @@ app.add_middleware(
 app.include_router(analysis.router)
 app.include_router(earnings.router)
 app.include_router(tickers.router)
+app.include_router(candles.router)
 app.include_router(websocket_router.router)
 app.include_router(videos.router)
 app.include_router(test.router)

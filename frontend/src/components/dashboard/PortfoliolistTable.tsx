@@ -10,6 +10,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useRealtimePrice } from '@/context/RealtimePriceContext'
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert'
 
@@ -28,6 +29,7 @@ type PortfoliolistTableProps = {
 
 export function PortfoliolistTable({ portfolio }: PortfoliolistTableProps) {
   const { status } = useRealtimePrice();
+  const navigate = useNavigate();
 
   const [sortConfig, setSortConfig] = useState<SortConfig>({
     key: null,
@@ -160,7 +162,11 @@ export function PortfoliolistTable({ portfolio }: PortfoliolistTableProps) {
                       : String(bValue).localeCompare(String(aValue))
                   })
                   .map((stock) => (
-                    <TableRow key={stock.ticker}>
+                    <TableRow
+                      key={stock.ticker}
+                      className="cursor-pointer hover:bg-muted/40 transition-colors"
+                      onClick={() => navigate(`/stock/${stock.ticker}`)}
+                    >
                       <TableCell className="font-medium text-center">{stock.ticker}</TableCell>
                       <TableCell className="text-center">{stock.company_name}</TableCell>
                       <TableCell className="text-center">{stock.quantity}</TableCell>

@@ -10,6 +10,7 @@ import Login from './pages/Auth/Login';
 import Signup from './pages/Auth/Signup';
 import Landing from './pages/Landing/Landing';
 import Home from './pages/Home/Home';
+import StockDetail from './pages/Stock/StockDetail';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 
@@ -40,6 +41,7 @@ export default function App() {
                     {/* Protected Routes */}
                     <Route element={<ProtectedRoute />}>
                       <Route path="/dashboard" element={<Home />} />
+                      <Route path="/stock/:symbol" element={<StockDetail />} />
                     </Route>
                   </Routes>
                 </div>
