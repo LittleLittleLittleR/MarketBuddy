@@ -30,12 +30,10 @@ export function AddTradePopup({ isOpen, onClose, portfolioId }: AddTradePopupPro
     mutationFn: async (payload: TradeRequest) => {
       await tradeHooks.addTrade(payload)
     },
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['portfolioNames'] }),
-        queryClient.invalidateQueries({ queryKey: ['portfolioPrices'] }),
-        queryClient.invalidateQueries({ queryKey: ['tradeByPortfolio'] }),
-      ])
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['portfolioPrices'] })
+      // Subscribe to real-time prices for the new ticker immediately.
+      // Only on buy — a sell doesn't open a new position.
       if (variables.side === 'buy') {
         subscribeToTicker(variables.ticker)
       }
