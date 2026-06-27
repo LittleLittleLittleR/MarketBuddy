@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 import { tradeHooks } from '@/hooks/trade'
+import { useRealtimePrice } from '@/context/RealtimePriceContext'
 
 import type { TradeRequest } from '@/types/trade'
 
@@ -23,17 +24,19 @@ export function AddTradePopup({ isOpen, onClose, portfolioId }: AddTradePopupPro
   const [inputSide, setInputSide] = useState('buy')
 
   const queryClient = useQueryClient()
+  const { subscribeToTicker } = useRealtimePrice()
 
   const addTradeMutation = useMutation({
     mutationFn: async (payload: TradeRequest) => {
       await tradeHooks.addTrade(payload)
     },
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['portfolioNames'] }),
-        queryClient.invalidateQueries({ queryKey: ['portfolioPrices'] }),
-        queryClient.invalidateQueries({ queryKey: ['tradeByPortfolio'] }),
-      ])
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['portfolioPrices'] })
+      // Subscribe to real-time prices for the new ticker immediately.
+      // Only on buy — a sell doesn't open a new position.
+      if (variables.side === 'buy') {
+        subscribeToTicker(variables.ticker)
+      }
     },
     onError: (error) => {
       console.error('Failed to add logs:', error)

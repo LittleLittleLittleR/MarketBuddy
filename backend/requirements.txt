@@ -16,3 +16,5 @@ Pillow
 matplotlib
 pandas_market_calendars
 lxml
+resend
+jinja2

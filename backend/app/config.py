@@ -28,6 +28,11 @@ class Settings(BaseSettings):
     #   env_file = ".env"
     #
 
+    # resend email
+    RESEND_API_KEY: str
+    RESEND_FROM_EMAIL: str
+    ADMIN_SECRET: str
+
     # S3 AWS
     AWS_ACCESS_KEY_ID: str
     AWS_SECRET_ACCESS_KEY: str
