@@ -9,6 +9,7 @@ import asyncio
 from app.dependencies.supabase_client import get_supabase
 from app.repositories.summary_repo import SummaryRepository
 from app.dependencies.s3_client import get_presigned_url
+from app.services.earnings_service import EarningsService
 
 router = APIRouter(prefix="/api/test", tags=["dev-testing"])
 redis_client = get_redis()
@@ -195,6 +196,46 @@ async def simulate_daily():
         await asyncio.sleep(10)
     finally:
         logger.info("[TEST_DAILY_SCHEDULER]: Closing...")
+
+
+@router.post("/simulate_earnings")
+async def simulate_earnings():
+    earnings_service = EarningsService(redis_client=redis_client)
+    CHUNK_SIZE = 10
+
+    cursor = 0
+    all_tracked_tickers = []
+    while True:
+        cursor, raw_batch = await redis_client.sscan(
+            "portfolio:tickers", cursor=cursor, count=1000
+        )
+        all_tracked_tickers.extend([
+            t.decode("utf-8") if isinstance(t, bytes) else t for t in raw_batch
+        ])
+        if cursor == 0:
+            break
+
+    if not all_tracked_tickers:
+        logger.warning("[TEST_EARNINGS] No tickers in 'portfolio:tickers'. Skipping.")
+        return {"status": "skipped", "reason": "no tickers tracked"}
+
+    chunks = [
+        all_tracked_tickers[i: i + CHUNK_SIZE]
+        for i in range(0, len(all_tracked_tickers), CHUNK_SIZE)
+    ]
+
+    logger.info(f"[TEST_EARNINGS] Processing {len(all_tracked_tickers)} tickers across {len(chunks)} chunks.")
+
+    for index, chunk in enumerate(chunks):
+        logger.info(f"[TEST_EARNINGS] Chunk {index + 1}/{len(chunks)}: {chunk}")
+        await asyncio.gather(
+            *[earnings_service.process_ticker(t) for t in chunk],
+            return_exceptions=True,
+        )
+        await asyncio.sleep(2)
+
+    logger.success("[TEST_EARNINGS] Sweep complete.")
+    return {"status": "done", "tickers_processed": all_tracked_tickers}
 
 
 @router.post("/get_all_videos")
