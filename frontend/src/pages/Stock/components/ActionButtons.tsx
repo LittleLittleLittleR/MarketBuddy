@@ -28,13 +28,13 @@ export function ActionButtons({ ticker }: ActionButtonsProps) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['watchlistPrices'] }),
   });
 
-  // Get portfolios for the trade popup
-  const { data: portfolioNames } = useQuery<PortfolioNames[]>({
+  const { data: portfolioNames } = useQuery<[string, string][], Error, PortfolioNames[]>({
     queryKey: ['portfolioNames'],
     queryFn: async () => {
-      const pairs = await portfolioHooks.getPortfolios();
-      return pairs.map(([name, created_at], i) => ({ id: i + 1, name, created_at }));
+      const res = await portfolioHooks.getPortfolios();
+      return res || [];
     },
+    select: (pairs) => pairs.map(([name, created_at], i) => ({ id: i + 1, name, created_at })),
   });
 
   const handleAddTrade = () => {
