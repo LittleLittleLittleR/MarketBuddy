@@ -48,8 +48,7 @@ export function StockNarrative({ ticker }: StockNarrativeProps) {
   const [summaryState, setSummaryState] = useState<{ ticker: string; data: SummaryRow | null } | null>(null);
   const [videoState, setVideoState] = useState<{ ticker: string; data: VideoStatus | null } | null>(null);
 
-  // Derive loading from whether the cached result belongs to the current ticker.
-  // This avoids synchronous setState inside the effect body (react-hooks/set-state-in-effect).
+  // derive loading from whether the cached result belongs to the current ticker cause had issue using setState in useEffect
   const loadingSummary = summaryState?.ticker !== ticker;
   const loadingVideo = videoState?.ticker !== ticker;
   const summary = loadingSummary ? null : (summaryState?.data ?? null);
