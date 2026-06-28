@@ -1,7 +1,6 @@
 import type { SummaryPayload } from "@/hooks/summary";
 import { Button } from "../ui/button";
 import { Card, CardContent } from "../ui/card";
-import { formatSummaryHtmlList } from "@/lib/share";
 
 type Props = {
   summaries: SummaryPayload[];
@@ -72,7 +71,13 @@ const Summaries = ({ summaries, isFetching, onFetchSummaries, onShareSummaries, 
 
                   <div
                     className="prose prose-sm max-w-none dark:prose-invert"
-                    dangerouslySetInnerHTML={{ __html: formatSummaryHtmlList(summary.summary) }}
+                    dangerouslySetInnerHTML={{
+                      __html: summary.summary
+                        ? summary.summary
+                          .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+                          .replace(/\n/g, "<br />")
+                        : "<em>Summary unavailable.</em>",
+                    }}
                   />
                 </CardContent>
               </Card>
@@ -82,6 +87,6 @@ const Summaries = ({ summaries, isFetching, onFetchSummaries, onShareSummaries, 
       )}
     </div>
   );
-};
+}
 
 export default Summaries;

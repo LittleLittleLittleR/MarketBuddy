@@ -3,7 +3,7 @@ import { stockService } from '@/db/stock';
 
 export interface SummaryPayload {
   ticker: string;
-  summary: string
+  summary: string | null;
 }
 
 interface Props {

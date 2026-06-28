@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import ReconnectingWebSocket from 'reconnecting-websocket';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/context/AuthContext';
@@ -7,14 +7,22 @@ import type { PortfolioListDisplay, WatchlistStockDisplay } from '@/types/stock'
 
 type ConnectionStatus = 'connecting' | 'connected' | 'error' | 'disconnected';
 
+export type LatestPrice = {
+  price: number;
+  open: number | null;
+  updated_at: string | null;
+};
+
 interface RealtimePriceContextType {
   status: ConnectionStatus;
   subscribeToTicker: (ticker: string) => void;
+  latestPrices: Record<string, LatestPrice>;
 }
 
 type LivePriceUpdate = {
   price: number;
   open: number | null;
+  updated_at?: string;
 };
 
 type LivePricePayload = Record<string, LivePriceUpdate | string>;
@@ -27,6 +35,7 @@ export const RealtimePriceProvider = ({ children }: { children: React.ReactNode 
   const { session } = useAuth();
 
   const [status, setStatus] = useState<ConnectionStatus>('connecting');
+  const [latestPrices, setLatestPrices] = useState<Record<string, LatestPrice>>({});
   const displayStatus = session?.access_token
     ? status === 'disconnected'
       ? 'connecting'
@@ -56,6 +65,7 @@ export const RealtimePriceProvider = ({ children }: { children: React.ReactNode 
     }
 
     const WS_URL = `wss://orbital-fastapi-backend-production.up.railway.app/ws/prices?token=${session.access_token}`
+    // const WS_URL = `ws://localhost:8000/ws/prices?token=${session.access_token}`
     const rws = new ReconnectingWebSocket(WS_URL, [], {
       maxReconnectionDelay: 20000, // Caps exponential backoff at 10 seconds max
       minReconnectionDelay: 5000,  // Starts retrying after 5 second if connection drops
@@ -100,6 +110,24 @@ export const RealtimePriceProvider = ({ children }: { children: React.ReactNode 
           //     'status': 'SUCCESS' | 'FAILED' | 'PENDING'
           //      }
           //  }
+
+          // update the raw latestPrices map so individual stock pages can read it
+          setLatestPrices((prev) => {
+            const next = { ...prev };
+            for (const [ticker, update] of Object.entries(incomingPrices)) {
+              let raw: unknown = update;
+              if (Array.isArray(raw)) raw = raw[0];
+              const normalized = typeof raw === 'string' ? JSON.parse(raw) : raw;
+              if (normalized?.price != null) {
+                next[ticker.toUpperCase()] = {
+                  price: normalized.price,
+                  open: normalized.open ?? null,
+                  updated_at: normalized.updated_at ?? null,
+                };
+              }
+            }
+            return next;
+          });
 
           // updates into TanStack Query's Cache
           queryClient.setQueryData<WatchlistStockDisplay[]>(['watchlistPrices'], (oldData) => {
@@ -155,14 +183,14 @@ export const RealtimePriceProvider = ({ children }: { children: React.ReactNode 
     };
   }, [session, queryClient]);
 
-  const subscribeToTicker = (ticker: string) => {
+  const subscribeToTicker = useCallback((ticker: string) => {
     if (rwsRef.current && rwsRef.current.readyState === WebSocket.OPEN) {
       rwsRef.current.send(JSON.stringify({ action: 'SUBSCRIBE_TICKER', ticker: ticker.toUpperCase() }));
     }
-  };
+  }, []);
 
   return (
-    <RealtimePriceContext.Provider value={{ status: displayStatus, subscribeToTicker }}>
+    <RealtimePriceContext.Provider value={{ status: displayStatus, subscribeToTicker, latestPrices }}>
       {children}
     </RealtimePriceContext.Provider>
   );
