@@ -1,15 +1,17 @@
 import type { SummaryPayload } from "@/hooks/summary";
 import { Button } from "../ui/button";
 import { Card, CardContent } from "../ui/card";
+import { formatSummaryHtmlList } from "@/lib/share";
 
 type Props = {
   summaries: SummaryPayload[];
   isFetching: boolean;
   onFetchSummaries: () => Promise<void>;
+  onShareSummaries: () => void;
   disableFetch: boolean;
 };
 
-const Summaries = ({ summaries, isFetching, onFetchSummaries, disableFetch }: Props) => {
+const Summaries = ({ summaries, isFetching, onFetchSummaries, onShareSummaries, disableFetch }: Props) => {
 
   return (
     <div className="mt-8 whitespace-pre-line text-gray-300">
@@ -24,12 +26,22 @@ const Summaries = ({ summaries, isFetching, onFetchSummaries, disableFetch }: Pr
           </p>
         </div>
 
-        <Button
-          onClick={onFetchSummaries}
-          disabled={isFetching || disableFetch}
-        >
-          {isFetching ? "Generating..." : "Generate Summary"}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={onShareSummaries}
+            disabled={summaries.length === 0}
+          >
+            Share Summaries
+          </Button>
+
+          <Button
+            onClick={onFetchSummaries}
+            disabled={isFetching || disableFetch}
+          >
+            {isFetching ? "Generating..." : "Generate Summary"}
+          </Button>
+        </div>
       </div>
 
       {summaries.length === 0 ? (
@@ -42,19 +54,21 @@ const Summaries = ({ summaries, isFetching, onFetchSummaries, disableFetch }: Pr
         </Card>
       ) : (
         <div className="space-y-4">
-          {summaries.map((summary, index) => (
-            <Card
-              key={index}
-              className="transition-shadow hover:shadow-md"
-            >
-              <CardContent className="p-5">
-                <div className="mb-3 flex items-center gap-2">
-                  <div className="h-2 w-2 rounded-full bg-green-500" />
+          {summaries.map((summary, index) => {
+            if (!summary || !summary.summary) return null;
 
-                  <span className="text-sm font-medium text-muted-foreground">
-                    Summary #{index + 1}: {summary.ticker}
-                  </span>
-                </div>
+            return (
+              <Card
+                key={index}
+                className="transition-shadow hover:shadow-md"
+              >
+                <CardContent className="p-5">
+                  <div className="mb-3 flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full bg-green-500" />
+                    <span className="text-sm font-medium text-muted-foreground">
+                      Summary #{index + 1}: {summary.ticker || "Ticker not available"}
+                    </span>
+                  </div>
 
                 <div
                   className="prose prose-sm max-w-none dark:prose-invert"
@@ -72,7 +86,6 @@ const Summaries = ({ summaries, isFetching, onFetchSummaries, disableFetch }: Pr
         </div>
       )}
     </div>
-
   );
 };
 
