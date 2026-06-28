@@ -1,7 +1,6 @@
 import type { SummaryPayload } from "@/hooks/summary";
 import { Button } from "../ui/button";
 import { Card, CardContent } from "../ui/card";
-import { formatSummaryHtmlList } from "@/lib/share";
 
 type Props = {
   summaries: SummaryPayload[];
@@ -82,11 +81,12 @@ const Summaries = ({ summaries, isFetching, onFetchSummaries, onShareSummaries, 
                 />
               </CardContent>
             </Card>
-          ))}
-        </div>
-      )}
-    </div>
+          );
+        })}
+      </div>
+    )}
+  </div>
   );
-};
+}
 
 export default Summaries;
