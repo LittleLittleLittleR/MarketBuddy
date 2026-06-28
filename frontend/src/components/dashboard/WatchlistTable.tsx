@@ -201,16 +201,16 @@ export function WatchlistTable({ stocks }: WatchlistTableProps) {
                   <TableCell className="font-medium text-center">{stock.ticker}</TableCell>
                   <TableCell className="text-center">{stock.company_name}</TableCell>
                   <TableCell className="text-center">
-                    {stock.current_price !== null ? `$${stock.current_price.toFixed(2)}` : 'N/A'}
+                    {stock.current_price != null ? `$${stock.current_price.toFixed(2)}` : 'N/A'}
                   </TableCell>
                   <TableCell
-                    className={`text-center font-medium ${stock.change_percent !== null && stock.change_percent >= 0
+                    className={`text-center font-medium ${stock.change_percent != null && stock.change_percent >= 0
                       ? 'text-green-500'
                       : 'text-red-500'
                       }`}
                   >
-                    {stock.change_percent !== null && stock.change_percent >= 0 ? '+' : ''}
-                    {stock.change_percent !== null ? `${stock.change_percent.toFixed(2)}%` : 'N/A'}
+                    {stock.change_percent != null && stock.change_percent >= 0 ? '+' : ''}
+                    {stock.change_percent != null ? `${stock.change_percent.toFixed(2)}%` : 'N/A'}
                   </TableCell>
                   <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
                     <DropdownMenu>
