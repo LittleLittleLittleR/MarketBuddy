@@ -19,6 +19,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert'
 import type { PortfolioTradeDisplay, TradeDisplay } from '@/types/trade'
 import { tradeHooks } from '@/hooks/trade'
+import { useRealtimePrice } from '@/context/RealtimePriceContext'
 
 type SortKey = keyof TradeDisplay
 
@@ -33,6 +34,7 @@ type TradeTableProps = {
 
 export function TradeTable({ trades }: TradeTableProps) {
   const queryClient = useQueryClient();
+  const { status } = useRealtimePrice();
 
   const [sortConfig, setSortConfig] = useState<SortConfig>({
     key: null,
@@ -170,12 +172,12 @@ export function TradeTable({ trades }: TradeTableProps) {
           <Table>
             <TableHeader>
               <TableRow>
-                {['ticker', 'company_name', 'current_price', 'change_percent'].map((field) => (
+                {(['ticker', 'side', 'quantity', 'entry_cost'] as SortKey[]).map((field) => (
                   <TableHead key={field} className="w-1/4 text-center">
-                    <Button variant="ghost" onClick={() => handleSort(field as keyof TradeDisplay)}>
+                    <Button variant="ghost" onClick={() => handleSort(field)}>
                       <span className="capitalize">{field.replace('_', ' ')}</span>
                       <span className="ml-2 inline-block w-4 text-center">
-                        {getSortIndicator(field as keyof TradeDisplay)}
+                        {getSortIndicator(field)}
                       </span>
                     </Button>
                   </TableHead>
@@ -187,17 +189,13 @@ export function TradeTable({ trades }: TradeTableProps) {
               {sortedData.map((trade) => (
                 <TableRow key={trade.ticker}>
                   <TableCell className="font-medium text-center">{trade.ticker}</TableCell>
-                  <TableCell 
-                  className={`text-center font-medium ${trade.side === 'buy'
-                    ? 'text-green-500'
-                    : 'text-red-500'
-                    }`}
-                  >   
+                  <TableCell
+                    className={`text-center font-medium ${trade.side === 'buy' ? 'text-green-500' : 'text-red-500'}`}
+                  >
                     {trade.side}
                   </TableCell>
-                  <TableCell className="text-center">{trade.ticker}</TableCell>
                   <TableCell className="text-center">{trade.quantity}</TableCell>
-                  <TableCell className="text-center">{trade.entry_cost}</TableCell>
+                  <TableCell className="text-center">${trade.entry_cost.toFixed(2)}</TableCell>
                   <TableCell className="text-center">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>

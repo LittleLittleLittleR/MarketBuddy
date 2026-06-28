@@ -41,13 +41,12 @@ export function PortfoliolistTable({ portfolio }: PortfoliolistTableProps) {
       name: portfolio.name,
       stocks: portfolio.stocks.map((stock) => {
         const change_percent =
-          stock.current_price !== null && stock.open_price !== null && stock.open_price !== 0
+          stock.current_price != null && stock.open_price != null && stock.open_price !== 0
             ? ((stock.current_price - stock.open_price) / stock.open_price) * 100
             : null
 
         return {
           ...stock,
-          current_price: stock.current_price ?? 0,
           change_percent,
         } as Row
       }),
@@ -171,7 +170,7 @@ export function PortfoliolistTable({ portfolio }: PortfoliolistTableProps) {
                       <TableCell className="text-center">{stock.company_name}</TableCell>
                       <TableCell className="text-center">{stock.quantity}</TableCell>
                       <TableCell className="text-center">${stock.average_price.toFixed(2)}</TableCell>
-                      <TableCell className="text-center">${stock.current_price?.toFixed(2) ?? 'null'}</TableCell>
+                      <TableCell className="text-center">{stock.current_price != null ? `$${stock.current_price.toFixed(2)}` : 'N/A'}</TableCell>
                       <TableCell
                         className={`text-center font-medium ${stock.profit_loss > 0 ? 'text-green-500'
                           : stock.profit_loss < 0 ? 'text-red-500'
