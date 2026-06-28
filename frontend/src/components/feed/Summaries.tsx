@@ -61,8 +61,8 @@ const Summaries = ({ summaries, isFetching, onFetchSummaries, disableFetch }: Pr
                   dangerouslySetInnerHTML={{
                     __html: summary.summary
                       ? summary.summary
-                          .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-                          .replace(/\n/g, "<br />")
+                        .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+                        .replace(/\n/g, "<br />")
                       : "<em>Summary unavailable.</em>",
                   }}
                 />
