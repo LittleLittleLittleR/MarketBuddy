@@ -60,8 +60,10 @@ const Summaries = ({ summaries, isFetching, onFetchSummaries, disableFetch }: Pr
                   className="prose prose-sm max-w-none dark:prose-invert"
                   dangerouslySetInnerHTML={{
                     __html: summary.summary
-                      .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-                      .replace(/\n/g, "<br />"),
+                      ? summary.summary
+                          .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+                          .replace(/\n/g, "<br />")
+                      : "<em>Summary unavailable.</em>",
                   }}
                 />
               </CardContent>

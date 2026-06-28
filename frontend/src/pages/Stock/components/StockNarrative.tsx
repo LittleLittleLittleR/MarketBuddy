@@ -45,21 +45,28 @@ async function fetchLatestVideo(ticker: string): Promise<VideoStatus> {
 }
 
 export function StockNarrative({ ticker }: StockNarrativeProps) {
-  const [summary, setSummary] = useState<SummaryRow | null>(null);
-  const [video, setVideo] = useState<VideoStatus | null>(null);
-  const [loadingSummary, setLoadingSummary] = useState(true);
-  const [loadingVideo, setLoadingVideo] = useState(true);
+  const [summaryState, setSummaryState] = useState<{ ticker: string; data: SummaryRow | null } | null>(null);
+  const [videoState, setVideoState] = useState<{ ticker: string; data: VideoStatus | null } | null>(null);
+
+  // Derive loading from whether the cached result belongs to the current ticker.
+  // This avoids synchronous setState inside the effect body (react-hooks/set-state-in-effect).
+  const loadingSummary = summaryState?.ticker !== ticker;
+  const loadingVideo = videoState?.ticker !== ticker;
+  const summary = loadingSummary ? null : (summaryState?.data ?? null);
+  const video = loadingVideo ? null : (videoState?.data ?? null);
 
   useEffect(() => {
-    setLoadingSummary(true);
-    fetchLatestSummary(ticker)
-      .then(setSummary)
-      .finally(() => setLoadingSummary(false));
+    let cancelled = false;
 
-    setLoadingVideo(true);
-    fetchLatestVideo(ticker)
-      .then(setVideo)
-      .finally(() => setLoadingVideo(false));
+    fetchLatestSummary(ticker).then(data => {
+      if (!cancelled) setSummaryState({ ticker, data });
+    });
+
+    fetchLatestVideo(ticker).then(data => {
+      if (!cancelled) setVideoState({ ticker, data });
+    });
+
+    return () => { cancelled = true; };
   }, [ticker]);
 
   return (
