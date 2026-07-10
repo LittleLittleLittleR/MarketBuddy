@@ -1,3 +1,4 @@
+import pytest
 from fastapi.testclient import TestClient
 from app.main import app
 from app.dependencies.auth import get_current_user
@@ -5,9 +6,10 @@ from app.routers.candles import get_candle_service
 
 app.dependency_overrides[get_current_user] = lambda: {"email": "test@test.com"}
 
-def test_invalid_ticker_returns_400():
+@pytest.mark.parametrize("bad_ticker", ["AAPL$", "AAPL;DROP", "AAAAAAAAAAA"])
+def test_invalid_ticker_returns_400(bad_ticker):
     with TestClient(app) as client:
-        resp = client.get("/api/tickers/../etc/candles")
+        resp = client.get(f"/api/tickers/{bad_ticker}/candles")
     assert resp.status_code == 400
 
 def test_invalid_range_returns_400():

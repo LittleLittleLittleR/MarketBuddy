@@ -7,7 +7,6 @@ from app.utils.ticker_validator import validate_ticker
     ("BRK.B", "BRK.B"),
     ("brk-a", "BRK-A"),
 ])
-
 def test_valid_tickers_uppercased(raw, expected):
     assert validate_ticker(raw) == expected
 

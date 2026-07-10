@@ -34,6 +34,12 @@ jobs:
         working-directory: ./backend
         run: ruff check app tests
 
+      - name: Run tests in Docker
+        working-directory: ./backend
+        run: |
+          docker build --target test -t marketbuddy-backend-test .
+          docker run --rm marketbuddy-backend-test
+
   frontend:
     runs-on: ubuntu-latest
     steps:
