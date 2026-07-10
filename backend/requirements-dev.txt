@@ -1,0 +1,6 @@
+pytest
+pytest-cov
+pytest-asyncio
+time-machine
+ruff
+mypy
