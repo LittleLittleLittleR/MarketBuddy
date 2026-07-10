@@ -17,7 +17,8 @@ COPY app ./app
 
 # test stage
 FROM base AS test
-RUN pip install --no-cache-dir pytest pytest-cov pytest-asyncio time-machine
+COPY requirements-dev.txt ./
+RUN pip install --no-cache-dir -r requirements-dev.txt
 COPY tests ./tests
 CMD python -m pytest -v --cov=app --cov-report=term-missing
 
