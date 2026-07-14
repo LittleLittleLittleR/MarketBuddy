@@ -30,7 +30,7 @@ export default function Login() {
   }
 
   return (
-    <main className="flex justify-center bg-background px-4">
+    <main className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-background px-4 py-12">
       <LoginForm />
     </main>
   )
