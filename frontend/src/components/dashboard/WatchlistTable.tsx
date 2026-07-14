@@ -178,17 +178,32 @@ export function WatchlistTable({ stocks }: WatchlistTableProps) {
           <Table>
             <TableHeader>
               <TableRow>
-                {['ticker', 'company_name', 'current_price', 'change_percent'].map((field) => (
-                  <TableHead key={field} className="w-1/4 text-center">
-                    <Button variant="ghost" onClick={() => handleSort(field as keyof WatchlistStockDisplay)}>
-                      <span className="capitalize">{field.replace('_', ' ')}</span>
-                      <span className="ml-2 inline-block w-4 text-center">
+                {[
+                  { field: 'ticker', width: 'w-[18%]' },
+                  { field: 'company_name', width: 'w-[34%]', hideBelow: 'sm' as const },
+                  { field: 'current_price', width: 'w-[22%]' },
+                  { field: 'change_percent', width: 'w-[22%]' },
+                ].map(({ field, width, hideBelow }) => (
+                  <TableHead
+                    key={field}
+                    className={`${width} min-w-0 text-center ${hideBelow === 'sm' ? 'hidden sm:table-cell' : ''}`}
+                  >
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleSort(field as keyof WatchlistStockDisplay)}
+                      className="w-full min-w-0 px-1.5"
+                    >
+                      <span className="min-w-0 truncate text-[11px] capitalize sm:text-xs">
+                        {field.replace('_', ' ')}
+                      </span>
+                      <span className="ml-1 inline-block w-3 shrink-0 text-center text-[11px] sm:text-xs">
                         {getSortIndicator(field as keyof WatchlistStockDisplay)}
                       </span>
                     </Button>
                   </TableHead>
                 ))}
-                <TableHead className="w-12" />
+                <TableHead className="w-[8%] p-0" />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -198,8 +213,8 @@ export function WatchlistTable({ stocks }: WatchlistTableProps) {
                   className="cursor-pointer hover:bg-muted/40 transition-colors"
                   onClick={() => navigate(`/stock/${stock.ticker}`)}
                 >
-                  <TableCell className="font-medium text-center">{stock.ticker}</TableCell>
-                  <TableCell className="text-center">{stock.company_name}</TableCell>
+                  <TableCell className="text-center font-medium">{stock.ticker}</TableCell>
+                  <TableCell className="hidden truncate text-center sm:table-cell">{stock.company_name}</TableCell>
                   <TableCell className="text-center">
                     {stock.current_price != null ? `$${stock.current_price.toFixed(2)}` : 'N/A'}
                   </TableCell>

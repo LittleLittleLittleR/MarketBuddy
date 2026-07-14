@@ -55,16 +55,16 @@ export function WatchlistHeader({ isAdding, setIsAdding }: WatchlistHeaderProps)
       </div>
       <Separator className="my-6" />
 
-      <form onSubmit={handleSubmit} className="flex gap-2">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-2 sm:flex-row">
         <input
           type="text"
           placeholder={`Enter Ticker (e.g AAPL)`}
           value={newTicker}
           onChange={(e) => setNewTicker(e.target.value.toUpperCase())}
-          className="border rounded-md px-3 py-2 w-64 bg-background text-foreground"
+          className="w-full rounded-md border bg-background px-3 py-2 text-foreground sm:w-64"
           disabled={isAdding}
         />
-        <Button type="submit" disabled={isAdding || !newTicker.trim()}>
+        <Button type="submit" disabled={isAdding || !newTicker.trim()} className="w-full sm:w-auto">
           {isAdding ? 'Adding...' : 'Add Stock'}
         </Button>
       </form>

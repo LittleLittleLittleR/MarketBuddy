@@ -172,23 +172,35 @@ export function TradeTable({ trades }: TradeTableProps) {
           <Table>
             <TableHeader>
               <TableRow>
-                {(['ticker', 'side', 'quantity', 'entry_cost'] as SortKey[]).map((field) => (
-                  <TableHead key={field} className="w-1/4 text-center">
-                    <Button variant="ghost" onClick={() => handleSort(field)}>
-                      <span className="capitalize">{field.replace('_', ' ')}</span>
-                      <span className="ml-2 inline-block w-4 text-center">
+                {([
+                  { field: 'ticker', width: 'w-[26%]' },
+                  { field: 'side', width: 'w-[22%]' },
+                  { field: 'quantity', width: 'w-[20%]' },
+                  { field: 'entry_cost', width: 'w-[24%]' },
+                ] as { field: SortKey; width: string }[]).map(({ field, width }) => (
+                  <TableHead key={field} className={`${width} min-w-0 text-center`}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleSort(field)}
+                      className="w-full min-w-0 px-1.5"
+                    >
+                      <span className="min-w-0 truncate text-[11px] capitalize sm:text-xs">
+                        {field.replace('_', ' ')}
+                      </span>
+                      <span className="ml-1 inline-block w-3 shrink-0 text-center text-[11px] sm:text-xs">
                         {getSortIndicator(field)}
                       </span>
                     </Button>
                   </TableHead>
                 ))}
-                <TableHead className="w-12" />
+                <TableHead className="w-[8%] p-0" />
               </TableRow>
             </TableHeader>
             <TableBody>
               {sortedData.map((trade) => (
                 <TableRow key={trade.ticker}>
-                  <TableCell className="font-medium text-center">{trade.ticker}</TableCell>
+                  <TableCell className="text-center font-medium">{trade.ticker}</TableCell>
                   <TableCell
                     className={`text-center font-medium ${trade.side === 'buy' ? 'text-green-500' : 'text-red-500'}`}
                   >

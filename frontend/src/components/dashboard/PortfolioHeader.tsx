@@ -19,7 +19,7 @@ export function PortfolioHeader({ portfolioId }: PortfolioHeaderProps) {
       </div>
       <Separator className="my-6" />
 
-      <Button type="submit" onClick={() => setOpenAddTrade(true)}>
+      <Button className="w-full sm:w-auto" type="submit" onClick={() => setOpenAddTrade(true)}>
         Add Trade
       </Button>
 
