@@ -8,7 +8,16 @@ from fastapi import FastAPI
 from app.config import settings
 from app.dependencies.supabase_client import get_supabase
 from app.repositories.summary_repo import SummaryRepository
-from app.routers import analysis, test, tickers, websocket_router, videos, earnings, email_admin, candles
+from app.routers import (
+    analysis,
+    test,
+    tickers,
+    websocket_router,
+    videos,
+    earnings,
+    email_admin,
+    candles,
+)
 from app.services.stock_analysis import StockAnalysisService
 from app.services.ticker_worker import TickerScraperService
 from app.dependencies.redis_client import get_redis
@@ -167,13 +176,17 @@ async def daily_analysis_scheduler():
 
 async def earnings_scheduler():
     supabase_client = await get_supabase()
-    earnings_service = EarningsService(redis_client=redis_client, supabase=supabase_client)
+    earnings_service = EarningsService(
+        redis_client=redis_client, supabase=supabase_client
+    )
     CHUNK_SIZE = 10
 
     while True:
         try:
             time_to_sleep = get_time_to_8am()
-            logger.info(f"[EARNINGS_SCHEDULER] Sleeping for {time_to_sleep}s until next cycle...")
+            logger.info(
+                f"[EARNINGS_SCHEDULER] Sleeping for {time_to_sleep}s until next cycle..."
+            )
             await asyncio.sleep(time_to_sleep)
 
             cursor = 0
@@ -182,25 +195,34 @@ async def earnings_scheduler():
                 cursor, raw_batch = await redis_client.sscan(
                     "portfolio:tickers", cursor=cursor, count=1000
                 )
-                all_tracked_tickers.extend([
-                    t.decode("utf-8") if isinstance(t, bytes) else t for t in raw_batch
-                ])
+                all_tracked_tickers.extend(
+                    [
+                        t.decode("utf-8") if isinstance(t, bytes) else t
+                        for t in raw_batch
+                    ]
+                )
                 if cursor == 0:
                     break
 
             if not all_tracked_tickers:
-                logger.warning("[EARNINGS_SCHEDULER] No tickers in 'portfolio:tickers'. Skipping.")
+                logger.warning(
+                    "[EARNINGS_SCHEDULER] No tickers in 'portfolio:tickers'. Skipping."
+                )
                 continue
 
             chunks = [
-                all_tracked_tickers[i: i + CHUNK_SIZE]
+                all_tracked_tickers[i : i + CHUNK_SIZE]
                 for i in range(0, len(all_tracked_tickers), CHUNK_SIZE)
             ]
 
-            logger.info(f"[EARNINGS_SCHEDULER] Processing {len(all_tracked_tickers)} tickers across {len(chunks)} chunks.")
+            logger.info(
+                f"[EARNINGS_SCHEDULER] Processing {len(all_tracked_tickers)} tickers across {len(chunks)} chunks."
+            )
 
             for index, chunk in enumerate(chunks):
-                logger.info(f"[EARNINGS_SCHEDULER] Chunk {index + 1}/{len(chunks)}: {chunk}")
+                logger.info(
+                    f"[EARNINGS_SCHEDULER] Chunk {index + 1}/{len(chunks)}: {chunk}"
+                )
 
                 await asyncio.gather(
                     *[earnings_service.process_ticker(t) for t in chunk],
@@ -241,6 +263,10 @@ async def on_the_dot_clock_scheduler():
             if not is_market_open():
                 logger.debug("Market not open. Skipping cycle.")
                 continue
+
+            if len(ws_manager.all_connections) == 0:
+                logger.debug("No connections. Skipping cycle.")
+                continue  # no connections dont need to poll
 
             # global clock lock to safeguard against overlapping loops
             clock_lock = await redis_client.set("lock:clock_sweep", "1", nx=True, ex=55)
@@ -292,7 +318,9 @@ async def monthly_digest_scheduler():
     while True:
         try:
             sleep_secs = get_time_to_1st_of_month_9am()
-            logger.info(f"[DIGEST_SCHEDULER] Sleeping {sleep_secs}s until 1st of month 9am SGT")
+            logger.info(
+                f"[DIGEST_SCHEDULER] Sleeping {sleep_secs}s until 1st of month 9am SGT"
+            )
             await asyncio.sleep(sleep_secs)
 
             now = sg_time_now()
@@ -300,7 +328,9 @@ async def monthly_digest_scheduler():
 
             # List all users; those with no email_preferences row are opted-in by default
             all_users = await supabase.auth.admin.list_users()
-            all_user_ids = [u.id for u in (all_users if isinstance(all_users, list) else [])]
+            all_user_ids = [
+                u.id for u in (all_users if isinstance(all_users, list) else [])
+            ]
 
             # Remove users who explicitly opted out
             prefs_resp = (
@@ -313,7 +343,9 @@ async def monthly_digest_scheduler():
             opted_in_ids = [uid for uid in all_user_ids if uid not in opted_out]
 
             jobs_created = await repo.create_jobs_for_month(opted_in_ids, month, year)
-            logger.info(f"[DIGEST_SCHEDULER] Created {jobs_created} jobs for {month}/{year}")
+            logger.info(
+                f"[DIGEST_SCHEDULER] Created {jobs_created} jobs for {month}/{year}"
+            )
 
         except Exception as e:
             logger.exception(f"[DIGEST_SCHEDULER_ERROR]: {e}")
@@ -322,7 +354,12 @@ async def monthly_digest_scheduler():
             logger.info("[DIGEST_SCHEDULER]: Closing...")
 
 
-async def _process_email_job(job: dict, supabase, repo: EmailJobRepository, digest_service: PortfolioDigestService) -> None:
+async def _process_email_job(
+    job: dict,
+    supabase,
+    repo: EmailJobRepository,
+    digest_service: PortfolioDigestService,
+) -> None:
     job_id: int = job["id"]
     user_id: str = job["user_id"]
     month: int = job["month"]
@@ -334,7 +371,9 @@ async def _process_email_job(job: dict, supabase, repo: EmailJobRepository, dige
         user_resp = await supabase.auth.admin.get_user_by_id(user_id)
         user_email: str | None = user_resp.user.email
         if not user_email:
-            logger.warning(f"[EMAIL] Skipping job_id={job_id}: user_id={user_id} has no email address")
+            logger.warning(
+                f"[EMAIL] Skipping job_id={job_id}: user_id={user_id} has no email address"
+            )
             await repo.mark_failed(job_id, "user has no email address", retry_count)
             return
 
