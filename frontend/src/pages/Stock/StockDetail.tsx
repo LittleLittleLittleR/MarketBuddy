@@ -46,7 +46,7 @@ export default function StockDetail() {
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
       {/* Top bar */}
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <Button
           variant="ghost"
           size="sm"
@@ -69,10 +69,7 @@ export default function StockDetail() {
       {/* Range selector + Chart */}
       <div className="space-y-2">
         <RangeSelector active={range} onChange={setRange} />
-        <div
-          className="w-full rounded-lg border border-border/60 bg-card overflow-hidden"
-          style={{ height: '380px' }}
-        >
+        <div className="w-full h-[260px] sm:h-[320px] lg:h-[380px] rounded-lg border border-border/60 bg-card overflow-hidden">
           <PriceChart
             candles={candleData?.candles ?? []}
             range={range}

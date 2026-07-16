@@ -115,7 +115,7 @@ const Home = () => {
   }
 
   return (
-    <div className="mx-auto max-w-7xl p-6">
+    <div className="mx-auto max-w-7xl p-4 sm:p-6">
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
 
         <TabsList className="grid w-full grid-cols-3">

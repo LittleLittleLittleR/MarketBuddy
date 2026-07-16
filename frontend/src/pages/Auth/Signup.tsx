@@ -29,7 +29,7 @@ export default function SignUpPage() {
 
   if (success) {
     return (
-      <main className="flex justify-center bg-background px-4">
+      <main className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-background px-4 py-12">
         <div className="w-full max-w-sm space-y-6 text-center">
           <div className="space-y-2">
             <h1 className="text-2xl font-semibold tracking-tight text-foreground">
@@ -50,7 +50,7 @@ export default function SignUpPage() {
   }
 
   return (
-    <main className="flex justify-center bg-background px-4">
+    <main className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-background px-4 py-12">
       <div className="w-full max-w-sm space-y-8">
         <div className="space-y-2 text-center">
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">

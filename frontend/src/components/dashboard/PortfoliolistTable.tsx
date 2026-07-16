@@ -127,17 +127,27 @@ export function PortfoliolistTable({ portfolio }: PortfoliolistTableProps) {
             <Table>
               <TableHeader>
                 <TableRow>
-                  {['ticker', 'company name', 'quantity', 'average price', 'current price', 'P&L'].map((field) => (
-                    <TableHead key={field} className="w-1/4 text-center">
-                      <Button variant="ghost" onClick={() => handleSort(field as SortKey)}>
-                        <span className="capitalize">{field}</span>
-                        <span className="ml-2 inline-block w-4 text-center">
+                  {[
+                    { field: 'ticker', width: 'w-[14%]' },
+                    { field: 'company name', width: 'w-[24%]', hideBelow: 'md' as const },
+                    { field: 'quantity', width: 'w-[12%]' },
+                    { field: 'average price', width: 'w-[16%]', hideBelow: 'sm' as const },
+                    { field: 'current price', width: 'w-[16%]' },
+                    { field: 'P&L', width: 'w-[16%]' },
+                  ].map(({ field, width, hideBelow }) => (
+                    <TableHead
+                      key={field}
+                      className={`${width} text-center ${hideBelow === 'md' ? 'hidden md:table-cell' : hideBelow === 'sm' ? 'hidden sm:table-cell' : ''}`}
+                    >
+                      <Button variant="ghost" size="sm" onClick={() => handleSort(field as SortKey)} className="w-full px-2">
+                        <span className="capitalize truncate">{field}</span>
+                        <span className="ml-1 inline-block w-4 shrink-0 text-center">
                           {getSortIndicator(field as SortKey)}
                         </span>
                       </Button>
                     </TableHead>
                   ))}
-                  <TableHead className="w-12" />
+                  <TableHead className="w-[2%]" />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -166,10 +176,10 @@ export function PortfoliolistTable({ portfolio }: PortfoliolistTableProps) {
                       className="cursor-pointer hover:bg-muted/40 transition-colors"
                       onClick={() => navigate(`/stock/${stock.ticker}`)}
                     >
-                      <TableCell className="font-medium text-center">{stock.ticker}</TableCell>
-                      <TableCell className="text-center">{stock.company_name}</TableCell>
+                      <TableCell className="text-center font-medium">{stock.ticker}</TableCell>
+                      <TableCell className="hidden truncate text-center md:table-cell">{stock.company_name}</TableCell>
                       <TableCell className="text-center">{stock.quantity}</TableCell>
-                      <TableCell className="text-center">${stock.average_price.toFixed(2)}</TableCell>
+                      <TableCell className="hidden text-center sm:table-cell">${stock.average_price.toFixed(2)}</TableCell>
                       <TableCell className="text-center">{stock.current_price != null ? `$${stock.current_price.toFixed(2)}` : 'N/A'}</TableCell>
                       <TableCell
                         className={`text-center font-medium ${stock.profit_loss > 0 ? 'text-green-500'

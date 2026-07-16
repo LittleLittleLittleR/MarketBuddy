@@ -24,7 +24,7 @@ export function DashboardSidebar({ portfolioNames, selectedView, onSelectView }:
 
   return (
     <>
-    <Sidebar collapsible="none" className="h-full rounded-lg border bg-background max-h-[80vh]">
+    <Sidebar collapsible="none" className="h-full w-full rounded-lg border bg-background lg:w-[240px] max-h-[60vh] lg:max-h-[80vh]">
       <div className="flex h-full flex-col">
         {/* Scrollable section */}
         <SidebarContent className="flex-1 overflow-y-auto">

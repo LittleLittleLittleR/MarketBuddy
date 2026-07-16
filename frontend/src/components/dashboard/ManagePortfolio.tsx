@@ -42,12 +42,12 @@ export function ManagePortfolioPopup({ isOpen, onClose }: ManagePortfolioPopupPr
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         onClick={onClose}
       ></div>
-      <div className="relative z-10 w-full max-w-md rounded-xl border bg-background p-6 shadow-xl">
+      <div className="relative z-10 max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl border bg-background p-6 shadow-xl">
         <h2 className="text-lg font-medium mb-4">
           Manage Portfolios
         </h2>

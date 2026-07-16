@@ -14,7 +14,7 @@ const Summaries = ({ summaries, isFetching, onFetchSummaries, onShareSummaries, 
 
   return (
     <div className="mt-8 whitespace-pre-line text-gray-300">
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">
             AI Market Summaries
@@ -25,11 +25,12 @@ const Summaries = ({ summaries, isFetching, onFetchSummaries, onShareSummaries, 
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <Button
             variant="outline"
             onClick={onShareSummaries}
             disabled={summaries.length === 0}
+            className="w-full sm:w-auto"
           >
             Share Summaries
           </Button>
@@ -37,6 +38,7 @@ const Summaries = ({ summaries, isFetching, onFetchSummaries, onShareSummaries, 
           <Button
             onClick={onFetchSummaries}
             disabled={isFetching || disableFetch}
+            className="w-full sm:w-auto"
           >
             {isFetching ? "Generating..." : "Generate Summary"}
           </Button>
