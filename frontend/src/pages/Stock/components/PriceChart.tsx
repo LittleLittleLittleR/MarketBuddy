@@ -23,6 +23,7 @@ type ChartMode = 'candle' | 'line';
 interface HoverInfo {
   x: number;
   y: number;
+  onLeft: boolean;
   time: number;
   open?: number;
   high?: number;
@@ -137,6 +138,7 @@ export function PriceChart({ candles, range, latestPrice, isLoading }: PriceChar
       setHover({
         x: point.x,
         y: point.y,
+        onLeft: point.x > containerRef.current!.clientWidth / 2,
         time: param.time as number,
         ...('close' in data
           ? { open: data.open, high: data.high, low: data.low, close: data.close }
@@ -168,7 +170,7 @@ export function PriceChart({ candles, range, latestPrice, isLoading }: PriceChar
     lineSeriesRef.current?.update({ time: t, value: latestPrice.price });
   }, [latestPrice, range, candles]);
 
-  const tooltipOnLeft = hover ? hover.x > (containerRef.current?.clientWidth ?? 0) / 2 : false;
+  const tooltipOnLeft = hover?.onLeft ?? false;
 
   return (
     <div className="relative w-full h-full">
