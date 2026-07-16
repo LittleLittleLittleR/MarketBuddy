@@ -20,11 +20,38 @@ interface PriceChartProps {
 
 type ChartMode = 'candle' | 'line';
 
+interface HoverInfo {
+  x: number;
+  y: number;
+  time: number;
+  open?: number;
+  high?: number;
+  low?: number;
+  close?: number;
+  value?: number;
+}
+
+const isIntraday = (range: RangeOption) => range === '1D' || range === '1W';
+
+function formatHoverDate(time: number, range: RangeOption): string {
+  const d = new Date(time * 1000);
+  if (isIntraday(range)) {
+    return d.toLocaleString('en-GB', {
+      day: '2-digit', month: 'short',
+      hour: '2-digit', minute: '2-digit', hour12: false,
+    });
+  }
+  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+const fmt = (n?: number) => (n == null ? '—' : n.toFixed(2));
+
 export function PriceChart({ candles, range, latestPrice, isLoading }: PriceChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const candleSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
   const lineSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
   const [mode, setMode] = useState<ChartMode>('candle');
+  const [hover, setHover] = useState<HoverInfo | null>(null);
 
   useEffect(() => {
     if (!containerRef.current || !candles.length) return;
@@ -48,6 +75,8 @@ export function PriceChart({ candles, range, latestPrice, isLoading }: PriceChar
       },
     });
 
+    let series: ISeriesApi<'Candlestick'> | ISeriesApi<'Line'>;
+
     if (mode === 'candle') {
       const cs = chart.addSeries(CandlestickSeries, {
         upColor: '#22c55e',
@@ -67,6 +96,7 @@ export function PriceChart({ candles, range, latestPrice, isLoading }: PriceChar
         }))
       );
       candleSeriesRef.current = cs;
+      series = cs;
     } else {
       const ls = chart.addSeries(LineSeries, {
         color: '#60a5fa',
@@ -79,29 +109,66 @@ export function PriceChart({ candles, range, latestPrice, isLoading }: PriceChar
         }))
       );
       lineSeriesRef.current = ls;
+      series = ls;
     }
 
     chart.timeScale().fitContent();
 
+    // crosshair tooltip
+    chart.subscribeCrosshairMove((param) => {
+      const point = param.point;
+      if (
+        !param.time || !point ||
+        point.x < 0 || point.y < 0 ||
+        point.x > containerRef.current!.clientWidth ||
+        point.y > containerRef.current!.clientHeight
+      ) {
+        setHover(null);
+        return;
+      }
+      const data = param.seriesData.get(series) as
+        | { open: number; high: number; low: number; close: number }
+        | { value: number }
+        | undefined;
+      if (!data) {
+        setHover(null);
+        return;
+      }
+      setHover({
+        x: point.x,
+        y: point.y,
+        time: param.time as number,
+        ...('close' in data
+          ? { open: data.open, high: data.high, low: data.low, close: data.close }
+          : { value: data.value }),
+      });
+    });
+
     return () => {
       candleSeriesRef.current = null;
       lineSeriesRef.current = null;
+      setHover(null);
       chart.remove();
     };
   }, [candles, mode]);
 
+  // extend the last real candle with the live tick — never append a detached bar.
+  // skip when stale/closed so a frozen price can't overwrite the true close
   useEffect(() => {
-    if (range !== '1D' || !latestPrice) return;
-    const minuteTs = (Math.floor(Date.now() / 1000 / 60) * 60) as UTCTimestamp;
+    if (range !== '1D' || !latestPrice || latestPrice.stale || !latestPrice.market_open || !candles.length) return;
+    const last = candles[candles.length - 1];
+    const t = last.time as UTCTimestamp;
     candleSeriesRef.current?.update({
-      time: minuteTs,
-      open: latestPrice.open ?? latestPrice.price,
-      high: latestPrice.price,
-      low: latestPrice.price,
+      time: t,
+      open: last.open,
+      high: Math.max(last.high, latestPrice.price),
+      low: Math.min(last.low, latestPrice.price),
       close: latestPrice.price,
     });
-    lineSeriesRef.current?.update({ time: minuteTs, value: latestPrice.price });
-  }, [latestPrice, range]);
+    lineSeriesRef.current?.update({ time: t, value: latestPrice.price });
+  }, [latestPrice, range, candles]);
+
+  const tooltipOnLeft = hover ? hover.x > (containerRef.current?.clientWidth ?? 0) / 2 : false;
 
   return (
     <div className="relative w-full h-full">
@@ -131,6 +198,32 @@ export function PriceChart({ candles, range, latestPrice, isLoading }: PriceChar
           LINE
         </Button>
       </div>
+
+      {hover && (
+        <div
+          className="absolute z-30 pointer-events-none rounded-md border border-zinc-700 bg-black/85 px-2.5 py-1.5 text-[10px] font-mono text-zinc-200 shadow-lg backdrop-blur-sm"
+          style={{
+            top: 8,
+            left: tooltipOnLeft ? 8 : undefined,
+            right: tooltipOnLeft ? undefined : 8,
+          }}
+        >
+          <div className="mb-1 text-zinc-400">{formatHoverDate(hover.time, range)}</div>
+          {hover.close != null ? (
+            <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
+              <span className="text-zinc-500">O</span><span>{fmt(hover.open)}</span>
+              <span className="text-zinc-500">H</span><span>{fmt(hover.high)}</span>
+              <span className="text-zinc-500">L</span><span>{fmt(hover.low)}</span>
+              <span className="text-zinc-500">C</span><span>{fmt(hover.close)}</span>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <span className="text-zinc-500">Price</span><span>{fmt(hover.value)}</span>
+            </div>
+          )}
+        </div>
+      )}
+
       <div ref={containerRef} className="w-full h-full" />
     </div>
   );

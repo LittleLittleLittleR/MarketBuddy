@@ -3,6 +3,8 @@ from app.schemas.scraping import StocksRequest
 from upstash_redis.asyncio import Redis
 from app.dependencies.redis_client import get_redis
 from app.services.ticker_worker import TickerScraperService
+from app.utils.ticker_validator import ticker_exists
+from app.utils.time_utils import last_market_close, is_market_open, annotate_freshness
 import json
 from app.dependencies.auth import get_current_user
 from loguru import logger
@@ -34,6 +36,9 @@ async def get_live_ticker_prices(
     tickers_to_scrape = []
     pending_hash_updates = {}
 
+    last_close = last_market_close()
+    market_open = is_market_open()
+
     for ticker, raw_val in zip(req_tickers, cached_prices):
 
         # data format:
@@ -48,22 +53,34 @@ async def get_live_ticker_prices(
                 f"[get_live_ticker_prices]: {ticker} cache found with raw val: ",
                 raw_val,
             )
-            response_payload[ticker] = json.loads(raw_val)
+            response_payload[ticker] = annotate_freshness(
+                json.loads(raw_val), last_close, market_open
+            )
+            continue
+
+        if not await ticker_exists(redis_client, ticker):
+            response_payload[ticker] = {
+                "price": None,
+                "opening_price": None,
+                "status": "INVALID",
+                "updated_at": None,
+            }
+            continue
+
         # case 2, never see this ticker before,
         # 1. need to add to list to scrape for this
         # 2. add into portfolio:tickers in redis, so next time always scrape this
         # 3. return a PENDING field for frontend
-        else:
-            tickers_to_scrape.append(ticker)
+        tickers_to_scrape.append(ticker)
 
-            pending_state = {
-                "price": None,
-                "opening_price": None,
-                "status": "PENDING",
-                "updated_at": None,
-            }
-            pending_hash_updates[ticker] = json.dumps(pending_state)
-            response_payload[ticker] = pending_state
+        pending_state = {
+            "price": None,
+            "opening_price": None,
+            "status": "PENDING",
+            "updated_at": None,
+        }
+        pending_hash_updates[ticker] = json.dumps(pending_state)
+        response_payload[ticker] = pending_state
 
     # now check if any tickers we need to scrape and spin up adhoc background worker to scrape
     if tickers_to_scrape:

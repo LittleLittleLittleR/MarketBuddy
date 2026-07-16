@@ -60,7 +60,7 @@ const Home = () => {
       const res = await watchlistHooks.fetchStocks()
       return res || []
     },
-    staleTime: Infinity,
+    staleTime: 60_000,
   })
 
   // portfolio
@@ -70,7 +70,7 @@ const Home = () => {
       const res = await portfolioHooks.fetchStocks()
       return res || []
     },
-    staleTime: Infinity,
+    staleTime: 60_000,
   })
   const { data: portfolioNames = [] } = useQuery<[string, string][]>({
     queryKey: ['portfolioNames'],

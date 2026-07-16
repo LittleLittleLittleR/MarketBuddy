@@ -70,6 +70,56 @@ def seconds_until_market_open() -> float:
     return 3600
 
 
+def last_market_close() -> float:
+    """Epoch seconds of the most recent NYSE session close at or before now."""
+    eastern = pytz.timezone("America/New_York")
+    now_et = datetime.now(eastern)
+
+    nyse = mcal.get_calendar("NYSE")
+    schedule = nyse.schedule(
+        start_date=(now_et - timedelta(days=10)).strftime("%Y-%m-%d"),
+        end_date=now_et.strftime("%Y-%m-%d"),
+    )
+
+    last_close = 0.0
+    for _, row in schedule.iterrows():
+        close_et = row["market_close"].to_pydatetime().astimezone(eastern)
+        if close_et <= now_et:
+            last_close = close_et.timestamp()
+
+    return last_close
+
+
+def annotate_freshness(entry: dict, last_close: float, market_open: bool) -> dict:
+    """Stamps a served price entry: stale if it predates the last close; market_open for live labelling."""
+    ts = entry.get("updated_at")
+    entry["stale"] = ts is None or float(ts) < last_close
+    entry["market_open"] = market_open
+    return entry
+
+
+def seconds_until_market_close() -> float:
+    """Returns seconds until the next NYSE market close, accounting for weekends/holidays."""
+    eastern = pytz.timezone("America/New_York")
+    now_et = datetime.now(eastern)
+
+    nyse = mcal.get_calendar("NYSE")
+
+    schedule = nyse.schedule(
+        start_date=now_et.strftime("%Y-%m-%d"),
+        end_date=(now_et + timedelta(days=7)).strftime("%Y-%m-%d"),
+    )
+
+    for _, row in schedule.iterrows():
+        market_close_et = row["market_close"].to_pydatetime().astimezone(eastern)
+
+        if market_close_et > now_et:
+            return (market_close_et - now_et).total_seconds()
+
+    # fallback: retry in an hour if no schedule found
+    return 3600
+
+
 def get_time_to_8am():
     SGT = zoneinfo.ZoneInfo("Asia/Singapore")
     TARGET_TIME = time(8, 0, 0)

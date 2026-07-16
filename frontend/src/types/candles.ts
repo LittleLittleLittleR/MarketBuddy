@@ -25,6 +25,9 @@ export interface StockProfile {
   eps: number | null;
   fifty_two_week_high: number | null;
   fifty_two_week_low: number | null;
+  last_price: number | null;
+  day_open: number | null;
+  prev_close: number | null;
   day_high: number | null;
   day_low: number | null;
   volume: number | null;

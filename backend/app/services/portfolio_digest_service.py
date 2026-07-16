@@ -1,6 +1,10 @@
+import asyncio
 from dataclasses import dataclass, field
 from typing import Optional
+import yfinance as yf
+import pandas as pd
 from supabase import AsyncClient
+from loguru import logger
 
 
 @dataclass
@@ -103,17 +107,19 @@ class PortfolioDigestService:
                 monthly_trades=monthly_trades,
             )
 
-        # Fetch current prices and company names for open tickers in one query
+        # Company names from Supabase; live prices fetched fresh at generation time
         tickers = list(open_positions.keys())
         stocks_resp = (
             await self.supabase.table("stocks")
-            .select("ticker, company_name, current_price")
+            .select("ticker, company_name")
             .in_("ticker", tickers)
             .execute()
         )
         stocks: dict[str, dict] = {
             s["ticker"]: s for s in (stocks_resp.data or [])
         }
+
+        fresh_prices = await self._fetch_current_prices(tickers)
 
         # Fetch the most recent AI summary per held ticker
         # We query all rows for these tickers ordered by created_at DESC and
@@ -139,7 +145,7 @@ class PortfolioDigestService:
             stock = stocks.get(ticker)
             qty = pos["quantity"]
             avg_price = pos["avg_price"]
-            current_price: Optional[float] = stock.get("current_price") if stock else None
+            current_price: Optional[float] = fresh_prices.get(ticker.upper())
             company_name: str = stock["company_name"] if stock else ticker
 
             pnl_per_share: Optional[float] = None
@@ -175,6 +181,38 @@ class PortfolioDigestService:
             positions=positions,
             monthly_trades=monthly_trades,
         )
+
+    async def _fetch_current_prices(self, tickers: list[str]) -> dict[str, float]:
+        symbols = [t.upper() for t in tickers]
+        if not symbols:
+            return {}
+
+        def _pull():
+            return yf.download(
+                " ".join(symbols),
+                period="1d",
+                group_by="ticker",
+                progress=False,
+                auto_adjust=True,
+            )
+
+        prices: dict[str, float] = {}
+        try:
+            data = await asyncio.to_thread(_pull)
+        except Exception as err:
+            logger.warning(f"[DIGEST_PRICE_FETCH] batch fetch failed: {err}")
+            return prices
+
+        is_multi = isinstance(data.columns, pd.MultiIndex)
+        for symbol in symbols:
+            try:
+                frame = data[symbol].dropna() if is_multi else data.dropna()
+                if frame.empty:
+                    continue
+                prices[symbol] = round(float(frame.iloc[-1]["Close"]), 2)
+            except Exception:
+                continue
+        return prices
 
     async def get_open_tickers(self, user_id: str) -> set[str]:
         portfolios_resp = (

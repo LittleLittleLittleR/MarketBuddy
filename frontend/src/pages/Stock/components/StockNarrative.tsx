@@ -4,6 +4,9 @@ import { supabase } from '@/lib/supabase';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
+const VIDEO_POLL_INTERVAL_MS = 5000;
+const MAX_VIDEO_POLLS = 36;
+
 interface StockNarrativeProps {
   ticker: string;
 }
@@ -56,16 +59,30 @@ export function StockNarrative({ ticker }: StockNarrativeProps) {
 
   useEffect(() => {
     let cancelled = false;
+    let pollId: ReturnType<typeof setInterval> | undefined;
 
     fetchLatestSummary(ticker).then(data => {
       if (!cancelled) setSummaryState({ ticker, data });
     });
 
-    fetchLatestVideo(ticker).then(data => {
-      if (!cancelled) setVideoState({ ticker, data });
-    });
+    // poll until the background build finishes; capped so a perpetually
+    // failing generation doesn't re-trigger scrape+GPT+ffmpeg forever
+    let attempts = 0;
+    const stopPolling = () => {
+      if (pollId) { clearInterval(pollId); pollId = undefined; }
+    };
 
-    return () => { cancelled = true; };
+    const loadVideo = async () => {
+      const data = await fetchLatestVideo(ticker);
+      if (cancelled) return;
+      setVideoState({ ticker, data });
+      if (data.status === 'READY' || ++attempts >= MAX_VIDEO_POLLS) stopPolling();
+    };
+
+    loadVideo();
+    pollId = setInterval(loadVideo, VIDEO_POLL_INTERVAL_MS);
+
+    return () => { cancelled = true; stopPolling(); };
   }, [ticker]);
 
   return (

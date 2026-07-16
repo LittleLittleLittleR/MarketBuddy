@@ -19,13 +19,21 @@ function PriceStat({ label, value }: { label: string; value: string }) {
 }
 
 export function QuoteHeader({ symbol, profile, latestPrice, isProfileLoading }: QuoteHeaderProps) {
-  const price = latestPrice?.price ?? null;
-  const open = latestPrice?.open ?? null;
+  // stale WS price → fall back to the fresh profile snapshot from yfinance
+  const useProfilePrice = !!latestPrice?.stale && profile?.last_price != null;
+  const price = useProfilePrice ? profile!.last_price : (latestPrice?.price ?? null);
+  const open = useProfilePrice ? profile!.day_open : (latestPrice?.open ?? null);
 
   const change = price != null && open != null && open !== 0 ? price - open : null;
   const changePct = change != null && open != null && open !== 0 ? (change / open) * 100 : null;
 
   const isUp = change != null ? change >= 0 : null;
+
+  const priceState = latestPrice?.stale
+    ? { label: 'Delayed', className: 'text-amber-400' }
+    : latestPrice?.market_open
+      ? { label: 'Live', className: 'text-muted-foreground' }
+      : { label: 'At Close', className: 'text-muted-foreground' };
 
   const fmtPrice = (v: number | null) => v != null ? `$${v.toFixed(2)}` : '—';
   const fmtChange = () => {
@@ -67,8 +75,8 @@ export function QuoteHeader({ symbol, profile, latestPrice, isProfileLoading }: 
             >
               {fmtChange()}
             </span>
-            <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider self-center">
-              Live
+            <span className={`text-[10px] font-mono uppercase tracking-wider self-center ${priceState.className}`}>
+              {priceState.label}
             </span>
           </>
         ) : (

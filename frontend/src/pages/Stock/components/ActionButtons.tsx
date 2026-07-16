@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { watchlistHooks } from '@/hooks/watchlist';
 import { portfolioHooks } from '@/hooks/portfolio';
 import { AddTradePopup } from '@/components/dashboard/AddTrade';
+import { toast } from 'sonner';
 import type { WatchlistStockDisplay, PortfolioNames } from '@/types/stock';
 
 interface ActionButtonsProps {
@@ -21,6 +22,11 @@ export function ActionButtons({ ticker }: ActionButtonsProps) {
   const addWatchlistMutation = useMutation({
     mutationFn: () => watchlistHooks.addStock(ticker),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['watchlistPrices'] }),
+    onError: (error) => {
+      toast.error('Could not add to watchlist', {
+        description: error instanceof Error ? error.message : 'Please try again.',
+      })
+    },
   });
 
   const removeWatchlistMutation = useMutation({

@@ -11,7 +11,11 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str
 
     # fastapi stuff
-    ALLOWED_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:5173"]
+    ALLOWED_ORIGINS: list[str] = [
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://localhost:5173",
+    ]
 
     # supabase
     SUPABASE_URL: str
@@ -56,4 +60,3 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
-

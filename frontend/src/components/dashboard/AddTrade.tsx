@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 import { tradeHooks } from '@/hooks/trade'
 import { useRealtimePrice } from '@/context/RealtimePriceContext'
+import { toast } from 'sonner'
 
 import type { TradeRequest } from '@/types/trade'
 
@@ -39,7 +40,9 @@ export function AddTradePopup({ isOpen, onClose, portfolioId }: AddTradePopupPro
       }
     },
     onError: (error) => {
-      console.error('Failed to add logs:', error)
+      toast.error('Could not add trade', {
+        description: error instanceof Error ? error.message : 'Please try again.',
+      })
     }
   })
 
@@ -57,7 +60,11 @@ export function AddTradePopup({ isOpen, onClose, portfolioId }: AddTradePopupPro
       side: inputSide as 'buy' | 'sell'
     }
 
-    await addTradeMutation.mutateAsync(tradePayload)
+    try {
+      await addTradeMutation.mutateAsync(tradePayload)
+    } catch {
+      return
+    }
 
     setInputStock('')
     setInputQuantity('')
