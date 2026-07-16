@@ -13,7 +13,6 @@ class Settings(BaseSettings):
     # fastapi stuff
     ALLOWED_ORIGINS: list[str] = [
         "http://localhost:3000",
-        "http://localhost:3001",
         "http://localhost:5173",
     ]
 
