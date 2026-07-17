@@ -6,6 +6,8 @@ from app.services.ticker_worker import TickerScraperService
 from app.services.portfolio_digest_service import PortfolioDigestService
 from app.dependencies.supabase_client import get_supabase
 from app.dependencies.redis_client import get_redis
+from app.utils.ticker_validator import ticker_exists
+from app.utils.time_utils import last_market_close, is_market_open, annotate_freshness
 from loguru import logger
 
 router = APIRouter()
@@ -96,10 +98,13 @@ async def websocket_prices_endpoint(websocket: WebSocket, token: str | None = No
         # check data inside Redis cache so the UI loads instantly
         initial_payload = {}
         if cached_prices:
+            last_close = last_market_close()
+            market_open = is_market_open()
             for ticker, data in zip(user_tickers, cached_prices):
                 if data:
-                    initial_payload[ticker] = (
-                        json.loads(data) if isinstance(data, str) else data
+                    entry = json.loads(data) if isinstance(data, str) else data
+                    initial_payload[ticker] = annotate_freshness(
+                        entry, last_close, market_open
                     )
 
             if initial_payload:
@@ -124,20 +129,34 @@ async def websocket_prices_endpoint(websocket: WebSocket, token: str | None = No
                     f"[WS_ACTION] User {user_id} requested stream subscription for: {new_ticker}"
                 )
 
+                if not await ticker_exists(redis_client, new_ticker):
+                    await websocket.send_json(
+                        {
+                            "type": "SUBSCRIBE_ERROR",
+                            "ticker": new_ticker,
+                            "reason": "Ticker not found",
+                        }
+                    )
+                    continue
+
                 # add ticker to tickers to track
                 await redis_client.sadd("portfolio:tickers", new_ticker)
                 # add client to ticker room
                 ws_manager.subscribe_client_to_tickers(websocket, [new_ticker])
 
                 cached_data = await redis_client.hmget("stock:prices", new_ticker)
+                cached_value = cached_data[0] if cached_data else None
 
-                if cached_data:
+                if cached_value:
                     # Cache Hit: Send straight down *only* this private socket pipeline
-                    logger.debug(f"Cached Data: {cached_data}")
+                    logger.debug(f"Cached Data: {cached_value}")
                     parsed_cache = (
-                        json.loads(cached_data)
-                        if isinstance(cached_data, str)
-                        else cached_data
+                        json.loads(cached_value)
+                        if isinstance(cached_value, str)
+                        else cached_value
+                    )
+                    parsed_cache = annotate_freshness(
+                        parsed_cache, last_market_close(), is_market_open()
                     )
                     payload_to_send = {
                         "type": "PRICE_UPDATE",

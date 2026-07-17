@@ -1,7 +1,10 @@
 import asyncio
+import json
 from fastapi import WebSocket
 from typing import Dict, Set, List
 from loguru import logger
+
+from app.utils.time_utils import last_market_close, is_market_open, annotate_freshness
 
 """
 TYPE: PING | PRICE_UPDATE
@@ -82,18 +85,23 @@ class TickerConnectionManager:
 
         client_payloads: Dict[WebSocket, Dict[str, dict]] = {}
 
+        last_close = last_market_close()
+        market_open = is_market_open()
+
         # go through fresh_data scraped
         for ticker, stock_data in fresh_prices.items():
             ticker_upper = ticker.upper()
 
             # check if any ws listening to ticker room
             if ticker_upper in self.ticker_subscriptions:
+                entry = json.loads(stock_data) if isinstance(stock_data, str) else stock_data
+                entry = annotate_freshness(entry, last_close, market_open)
                 for client in self.ticker_subscriptions[ticker_upper]:
                     if client not in client_payloads:
                         client_payloads[client] = {}
 
                     # append stock_data to this specific user's minute update chunk
-                    client_payloads[client][ticker_upper] = stock_data
+                    client_payloads[client][ticker_upper] = entry
 
         # mass broadcast over async task
         if client_payloads:

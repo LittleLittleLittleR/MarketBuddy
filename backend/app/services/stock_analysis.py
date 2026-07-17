@@ -3,6 +3,7 @@ from brightdata import BrightDataClient
 from typing import List
 from openai import AsyncOpenAI
 import httpx
+import json
 from upstash_redis.asyncio import Redis
 from loguru import logger
 
@@ -39,35 +40,54 @@ class StockAnalysisService:
             try:
                 restricted_query = f"{ticker}+stock+news"
 
-                # tbm=nws: news tab
-                # tbs=qdr:d: Past 24 hours
+                # tbm=nws: news tab | tbs=qdr:d: Past 24 hours
                 search_url = f"https://www.google.com/search?q={restricted_query}&tbm=nws&tbs=qdr:d"
 
                 data = {
                     "url": search_url,
-                    "format": "raw",
+                    "format": "json",
+                    "data_format": "parsed",
                     "zone": settings.BRIGHTDATA_SERP_ZONE,
                 }
 
-                async with httpx.AsyncClient(timeout=15) as client:
+                async with httpx.AsyncClient(timeout=60) as client:
                     response = await client.post(
                         "https://api.brightdata.com/request", json=data, headers=headers
                     )
 
+                if not response.text:
+                    logger.warning(
+                        f"[BRIGHTDATA] Empty body for {ticker} — status={response.status_code} "
+                        f"err={response.headers.get('x-brd-err-code')} "
+                        f"msg={response.headers.get('x-brd-err-msg')}"
+                    )
+                    continue
+
                 res_json = response.json()
-                news_results = res_json.get("news", [])
+
+                parsed = res_json.get("body", res_json)
+                if isinstance(parsed, str):
+                    parsed = json.loads(parsed) if parsed.strip() else {}
+
+                news_results = parsed.get("news", [])
 
                 # fallback if got nothing
                 if not news_results:
-                    news_results = res_json.get("organic", [])
+                    news_results = parsed.get("organic", [])
 
                 # check if got result again, if dh then return empty list
                 if not news_results:
-                    logger.warning(f"No news found for {ticker}")
+                    logger.warning(
+                        f"No news found for {ticker} — keys={list(parsed.keys())}"
+                    )
                     return []
 
                 articles = []
                 for item in news_results:
+                    age = str(item.get("date", "")).lower()
+                    if age and not any(u in age for u in ("minute", "hour", "now")):
+                        continue
+
                     article = NewsArticle(
                         title=item.get("title", "Untitled"),
                         url=item.get("link", ""),

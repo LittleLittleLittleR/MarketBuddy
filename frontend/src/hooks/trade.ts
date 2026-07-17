@@ -20,24 +20,19 @@ const fetchTradesByPortfolio = async () => {
 }
 
 const addTrade = async (payload: TradeRequest) => {
-  try {
-      if (!payload.portfolio_id || !payload.ticker.trim() || !payload.quantity || !payload.entry_cost || !payload.side) {
-        return
-      }
-      await tradeService.createTrade({
-        portfolio_id: payload.portfolio_id,
-        ticker: payload.ticker,
-        quantity: payload.quantity,
-        entry_cost: payload.entry_cost,
-        fees: payload.fees,
-        notes: payload.notes,
-        trade_date: payload.trade_date,
-        side: payload.side
-      });
-  
-    } catch (error) {
-      console.error('Failed to add new trade:', error)
-    }
+  if (!payload.portfolio_id || !payload.ticker.trim() || !payload.quantity || !payload.entry_cost || !payload.side) {
+    return
+  }
+  await tradeService.createTrade({
+    portfolio_id: payload.portfolio_id,
+    ticker: payload.ticker,
+    quantity: payload.quantity,
+    entry_cost: payload.entry_cost,
+    fees: payload.fees,
+    notes: payload.notes,
+    trade_date: payload.trade_date,
+    side: payload.side
+  });
 }
 
 const deleteTrade = async (tradeId: number) => {

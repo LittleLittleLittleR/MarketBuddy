@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useRef, useSt
 import ReconnectingWebSocket from 'reconnecting-websocket';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/context/AuthContext';
+import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import type { PortfolioListDisplay, WatchlistStockDisplay } from '@/types/stock';
 
@@ -11,6 +12,8 @@ export type LatestPrice = {
   price: number;
   open: number | null;
   updated_at: string | null;
+  stale: boolean;
+  market_open: boolean;
 };
 
 interface RealtimePriceContextType {
@@ -32,7 +35,9 @@ const RealtimePriceContext = createContext<RealtimePriceContextType | null>(null
 export const RealtimePriceProvider = ({ children }: { children: React.ReactNode }) => {
   const queryClient = useQueryClient();
   const rwsRef = useRef<ReconnectingWebSocket | null>(null);
+  const subscribedTickersRef = useRef<Set<string>>(new Set());
   const { session } = useAuth();
+  const isAuthed = !!session?.access_token;
 
   const [status, setStatus] = useState<ConnectionStatus>('connecting');
   const [latestPrices, setLatestPrices] = useState<Record<string, LatestPrice>>({});
@@ -57,18 +62,25 @@ export const RealtimePriceProvider = ({ children }: { children: React.ReactNode 
   }, [status]);
 
   useEffect(() => {
-    if (!session?.access_token) {
+    if (!isAuthed) {
       if (rwsRef.current) {
         rwsRef.current.close();
+        rwsRef.current = null;
       }
       return;
     }
 
-    const WS_URL = `wss://orbital-fastapi-backend-production.up.railway.app/ws/prices?token=${session.access_token}`
-    // const WS_URL = `ws://localhost:8000/ws/prices?token=${session.access_token}`
-    const rws = new ReconnectingWebSocket(WS_URL, [], {
-      maxReconnectionDelay: 20000, // Caps exponential backoff at 10 seconds max
-      minReconnectionDelay: 5000,  // Starts retrying after 5 second if connection drops
+    const urlProvider = async () => {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      const WS_URL = `wss://orbital-fastapi-backend-production.up.railway.app/ws/prices?token=${token}`
+      // const WS_URL = `ws://localhost:8000/ws/prices?token=${token}`
+      return WS_URL;
+    };
+
+    const rws = new ReconnectingWebSocket(urlProvider, [], {
+      maxReconnectionDelay: 20000,
+      minReconnectionDelay: 5000,
       reconnectionDelayGrowFactor: 1.5,
       maxRetries: 5,
     });
@@ -77,7 +89,9 @@ export const RealtimePriceProvider = ({ children }: { children: React.ReactNode 
 
     rws.onopen = () => {
       setStatus('connected')
-      console.log('[RWS] Client WS connected.')
+      for (const ticker of subscribedTickersRef.current) {
+        rws.send(JSON.stringify({ action: 'SUBSCRIBE_TICKER', ticker }));
+      }
     };
 
 
@@ -99,6 +113,15 @@ export const RealtimePriceProvider = ({ children }: { children: React.ReactNode 
     rws.onmessage = (event) => {
       try {
         const payload = JSON.parse(event.data);
+
+        if (payload.type === 'SUBSCRIBE_ERROR') {
+          const badTicker = String(payload.ticker ?? '').toUpperCase();
+          subscribedTickersRef.current.delete(badTicker);
+          toast.error(`Couldn't track ${badTicker}`, {
+            description: payload.reason ?? 'Ticker not found.',
+          });
+          return;
+        }
 
         if (payload.type === 'PRICE_UPDATE' && payload.data) {
           const incomingPrices: LivePricePayload = payload.data;
@@ -123,6 +146,8 @@ export const RealtimePriceProvider = ({ children }: { children: React.ReactNode 
                   price: normalized.price,
                   open: normalized.open ?? null,
                   updated_at: normalized.updated_at ?? null,
+                  stale: normalized.stale ?? false,
+                  market_open: normalized.market_open ?? false,
                 };
               }
             }
@@ -179,13 +204,17 @@ export const RealtimePriceProvider = ({ children }: { children: React.ReactNode 
     return () => {
       if (rwsRef.current) {
         rwsRef.current.close();
+        rwsRef.current = null;
       }
     };
-  }, [session, queryClient]);
+  }, [isAuthed, queryClient]);
 
   const subscribeToTicker = useCallback((ticker: string) => {
-    if (rwsRef.current && rwsRef.current.readyState === WebSocket.OPEN) {
-      rwsRef.current.send(JSON.stringify({ action: 'SUBSCRIBE_TICKER', ticker: ticker.toUpperCase() }));
+    const normalized = ticker.toUpperCase();
+    subscribedTickersRef.current.add(normalized);
+    const rws = rwsRef.current;
+    if (rws && rws.readyState === WebSocket.OPEN) {
+      rws.send(JSON.stringify({ action: 'SUBSCRIBE_TICKER', ticker: normalized }));
     }
   }, []);
 

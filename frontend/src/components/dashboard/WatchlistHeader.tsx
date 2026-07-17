@@ -4,6 +4,7 @@ import { Separator } from '@/components/ui/separator'
 import { watchlistHooks } from '@/hooks/watchlist';
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useRealtimePrice } from '@/context/RealtimePriceContext'
+import { toast } from 'sonner'
 
 type WatchlistHeaderProps = {
   isAdding: boolean
@@ -27,7 +28,9 @@ export function WatchlistHeader({ isAdding, setIsAdding }: WatchlistHeaderProps)
       subscribeToTicker(ticker)
     },
     onError: (error) => {
-      console.error('Failed to add stock entry:', error)
+      toast.error('Could not add stock', {
+        description: error instanceof Error ? error.message : 'Please try again.',
+      })
     },
     onSettled: () => {
       setIsAdding(false)

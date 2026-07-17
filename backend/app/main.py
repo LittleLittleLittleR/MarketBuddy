@@ -28,6 +28,7 @@ from app.utils.time_utils import (
     is_market_open,
     sg_time_now,
     seconds_until_market_open,
+    seconds_until_market_close,
 )
 from app.services.websocket_manager import ws_manager
 from app.services.earnings_service import EarningsService
@@ -276,22 +277,7 @@ async def on_the_dot_clock_scheduler():
 
             logger.info("Starting global 1-minute sweep...")
 
-            # scan redis for portfolio:tickers to scrape
-            cursor = 0
-            all_tracked_tickers = []
-
-            while True:
-                cursor, raw_batch = await redis_client.sscan(
-                    "portfolio:tickers", cursor=cursor, count=1000
-                )
-                # handle b'' data from redis
-                tickers_list = [
-                    t.decode("utf-8") if isinstance(t, bytes) else t for t in raw_batch
-                ]
-                all_tracked_tickers.extend(tickers_list)
-
-                if cursor == 0:
-                    break
+            all_tracked_tickers = list(ws_manager.ticker_subscriptions.keys())
 
             if all_tracked_tickers:
                 fresh_data = await scraper.scrape_and_cache_batch(
@@ -309,6 +295,45 @@ async def on_the_dot_clock_scheduler():
         except Exception as e:
             logger.exception(f"[CLOCK_SCHEDULER_ERROR]: {e}")
             await asyncio.sleep(1)
+
+
+async def market_close_scheduler():
+    """Warms stock:prices with each session's final close for all portfolio:tickers, regardless of connections."""
+    scraper = TickerScraperService(redis_client, max_sub_batch_size=10)
+    settle_buffer = 180  # past closing bell so yfinance settles the close print
+
+    logger.info("[CLOSE_SCHEDULER]: Starting scheduler...")
+    while True:
+        try:
+            sleep_seconds = seconds_until_market_close() + settle_buffer
+            logger.info(
+                f"[CLOSE_SCHEDULER] Sleeping {sleep_seconds:.0f}s until next close (+buffer)."
+            )
+            await asyncio.sleep(sleep_seconds)
+
+            tracked = await redis_client.smembers("portfolio:tickers")
+            tickers = list(tracked) if tracked else []
+            if not tickers:
+                logger.info("[CLOSE_SCHEDULER] No tracked tickers to warm. Skipping.")
+                continue
+
+            # shared sweep lock guards against racing the minute sweep hmset
+            lock = await redis_client.set("lock:clock_sweep", "1", nx=True, ex=120)
+            if not lock:
+                logger.debug("[CLOSE_SCHEDULER] Sweep already running. Skipping.")
+                continue
+
+            logger.info(f"[CLOSE_SCHEDULER] Warming close prices for {len(tickers)} tickers")
+            fresh_data = await scraper.scrape_and_cache_batch(tickers, is_clock_sweep=True)
+            if fresh_data:
+                await ws_manager.broadcast_targeted_updates(fresh_prices=fresh_data)
+
+            await redis_client.delete("lock:clock_sweep")
+            logger.success("[CLOSE_SCHEDULER] Close warm complete.")
+
+        except Exception as e:
+            logger.exception(f"[CLOSE_SCHEDULER_ERROR]: {e}")
+            await asyncio.sleep(60)
 
 
 async def monthly_digest_scheduler():
@@ -419,6 +444,7 @@ async def lifespan(app: FastAPI):
     earnings_scheduler_task = asyncio.create_task(earnings_scheduler())
     digest_scheduler_task = asyncio.create_task(monthly_digest_scheduler())
     email_worker_task = asyncio.create_task(email_job_queue_worker())
+    close_scheduler_task = asyncio.create_task(market_close_scheduler())
     logger.success("[LIFESPAN] Background schedulers are active")
     yield
     minute_scheduler_task.cancel()
@@ -426,6 +452,7 @@ async def lifespan(app: FastAPI):
     earnings_scheduler_task.cancel()
     digest_scheduler_task.cancel()
     email_worker_task.cancel()
+    close_scheduler_task.cancel()
     try:
         await asyncio.gather(
             minute_scheduler_task,
@@ -433,6 +460,7 @@ async def lifespan(app: FastAPI):
             earnings_scheduler_task,
             digest_scheduler_task,
             email_worker_task,
+            close_scheduler_task,
             return_exceptions=True,
         )
     except asyncio.CancelledError:
