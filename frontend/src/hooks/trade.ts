@@ -1,5 +1,6 @@
 import { portfolioService } from "@/db/portfolio"
 import { tradeService } from "@/db/trade"
+import { stockHooks } from "@/hooks/stock"
 import type { PortfolioTradeDisplay, TradeRequest } from "@/types/trade"
 
 
@@ -23,9 +24,12 @@ const addTrade = async (payload: TradeRequest) => {
   if (!payload.portfolio_id || !payload.ticker.trim() || !payload.quantity || !payload.entry_cost || !payload.side) {
     return
   }
+  
+  const stock = await stockHooks.resolveStock(payload.ticker)
+
   await tradeService.createTrade({
     portfolio_id: payload.portfolio_id,
-    ticker: payload.ticker,
+    ticker: stock.ticker,
     quantity: payload.quantity,
     entry_cost: payload.entry_cost,
     fees: payload.fees,
