@@ -70,6 +70,25 @@ const WatchlistStockIDAuth = async (watchlistStockId: number) => {
 };
 
 
+const PriceAlertIDAuth = async (alertId: number) => {
+  const user = await UserIDAuth();
+  const { data: alert, error } = await supabase
+    .from('price_alerts')
+    .select('user_id')
+    .eq('id', alertId)
+    .single();
+
+  if (error || !alert) {
+    throw new Error('Price alert not found');
+  }
+  if (alert.user_id !== user.id) {
+    throw new Error('Unauthorized');
+  }
+
+  return alert;
+};
+
+
 const TradeIDAuth = async (tradeId: number) => {
   const { data: trade, error } = await supabase
     .from('trades')
@@ -94,4 +113,5 @@ export const dbAuth = {
   checkPortfolioAuth: PortfolioIDAuth,
   checkTradeAuth: TradeIDAuth,
   checkWatchlistStockAuth: WatchlistStockIDAuth,
+  checkPriceAlertAuth: PriceAlertIDAuth,
 }
