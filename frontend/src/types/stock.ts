@@ -23,6 +23,23 @@ export interface WatchlistStockDisplay {
   open_price: number | null;
 }
 
+export type AlertCondition =
+  | 'price_above'
+  | 'price_below'
+  | 'percent_change_up'
+  | 'percent_change_down';
+
+export interface PriceAlertResponse {
+  id: number;
+  user_id: string;
+  stock_ticker: string;
+  condition: AlertCondition;
+  threshold: number;
+  is_active: boolean;
+  triggered_at: string | null;
+  created_at: string;
+}
+
 export interface PortfoliolistStockDisplay {
   ticker: string;
   company_name: string;

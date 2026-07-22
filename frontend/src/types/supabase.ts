@@ -240,6 +240,54 @@ export type Database = {
           },
         ]
       }
+      price_alerts: {
+        Row: {
+          id: number
+          user_id: string
+          stock_ticker: string
+          condition: Database["public"]["Enums"]["alert_condition"]
+          threshold: number
+          is_active: boolean
+          triggered_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: number
+          user_id: string
+          stock_ticker: string
+          condition: Database["public"]["Enums"]["alert_condition"]
+          threshold: number
+          is_active?: boolean
+          triggered_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: number
+          user_id?: string
+          stock_ticker?: string
+          condition?: Database["public"]["Enums"]["alert_condition"]
+          threshold?: number
+          is_active?: boolean
+          triggered_at?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_alerts_stock_ticker_fkey"
+            columns: ["stock_ticker"]
+            isOneToOne: false
+            referencedRelation: "stocks"
+            referencedColumns: ["ticker"]
+          },
+          {
+            foreignKeyName: "price_alerts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -249,6 +297,11 @@ export type Database = {
     }
     Enums: {
       trade_side: "buy" | "sell"
+      alert_condition:
+        | "price_above"
+        | "price_below"
+        | "percent_change_up"
+        | "percent_change_down"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -377,6 +430,12 @@ export const Constants = {
   public: {
     Enums: {
       trade_side: ["buy", "sell"],
+      alert_condition: [
+        "price_above",
+        "price_below",
+        "percent_change_up",
+        "percent_change_down",
+      ],
     },
   },
 } as const
