@@ -13,6 +13,7 @@ import Home from './pages/Home/Home';
 import StockDetail from './pages/Stock/StockDetail';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
+import { PriceAlertMonitor } from './components/PriceAlertMonitor';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -30,6 +31,7 @@ export default function App() {
           <BrowserRouter>
             <AuthProvider>
               <RealtimePriceProvider>
+                <PriceAlertMonitor />
                 <Navbar />
                 <div className='lg:p-8 min-h-screen'>
                   <Routes>
