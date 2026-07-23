@@ -16,11 +16,15 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useMemo, useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
+import { Bell } from 'lucide-react'
 import { watchlistHooks } from '@/hooks/watchlist'
+import { priceAlertHooks } from '@/hooks/priceAlerts'
 import { useRealtimePrice } from '@/context/RealtimePriceContext'
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert'
+import { SetPriceAlertPopup } from './SetPriceAlert'
+import type { PriceAlertResponse } from '@/types/stock'
 
 type SortKey = keyof WatchlistStockDisplay
 
@@ -42,6 +46,19 @@ export function WatchlistTable({ stocks }: WatchlistTableProps) {
     key: null,
     direction: null,
   })
+
+  const [alertTicker, setAlertTicker] = useState<string | null>(null)
+
+  const { data: activeAlerts = [] } = useQuery<PriceAlertResponse[]>({
+    queryKey: ['priceAlerts'],
+    queryFn: priceAlertHooks.fetchAlerts,
+    staleTime: 30_000,
+  })
+
+  const tickersWithAlerts = useMemo(
+    () => new Set(activeAlerts.filter((a) => a.is_active).map((a) => a.stock_ticker.toUpperCase())),
+    [activeAlerts]
+  )
 
   const deleteMutation = useMutation({
     mutationFn: async (ticker: string) => {
@@ -213,7 +230,14 @@ export function WatchlistTable({ stocks }: WatchlistTableProps) {
                   className="cursor-pointer hover:bg-muted/40 transition-colors"
                   onClick={() => navigate(`/stock/${stock.ticker}`)}
                 >
-                  <TableCell className="text-center font-medium">{stock.ticker}</TableCell>
+                  <TableCell className="text-center font-medium">
+                    <span className="inline-flex items-center justify-center gap-1">
+                      {stock.ticker}
+                      {tickersWithAlerts.has(stock.ticker.toUpperCase()) && (
+                        <Bell className="h-3 w-3 shrink-0 text-amber-500" aria-label="Alert set" />
+                      )}
+                    </span>
+                  </TableCell>
                   <TableCell className="hidden truncate text-center sm:table-cell">{stock.company_name}</TableCell>
                   <TableCell className="text-center">
                     {stock.current_price != null ? `$${stock.current_price.toFixed(2)}` : 'N/A'}
@@ -233,6 +257,9 @@ export function WatchlistTable({ stocks }: WatchlistTableProps) {
                         <Button variant="ghost" className="h-8 w-8 p-0">⋮</Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => setAlertTicker(stock.ticker)} className="cursor-pointer">
+                          Set Alert
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => deleteMutation.mutate(stock.ticker)} className="text-red-500 cursor-pointer">
                           Delete
                         </DropdownMenuItem>
@@ -245,6 +272,14 @@ export function WatchlistTable({ stocks }: WatchlistTableProps) {
           </Table>
         </CardContent>
       </Card>
+
+      {alertTicker && (
+        <SetPriceAlertPopup
+          isOpen={!!alertTicker}
+          onClose={() => setAlertTicker(null)}
+          ticker={alertTicker}
+        />
+      )}
     </div>
   )
 }
