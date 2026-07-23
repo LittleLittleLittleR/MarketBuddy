@@ -15,6 +15,7 @@ import { PortfolioHeader } from '@/components/dashboard/PortfolioHeader'
 import { WatchlistTable } from '@/components/dashboard/WatchlistTable'
 import { PortfoliolistTable } from '@/components/dashboard/PortfoliolistTable'
 import { TradeTable } from '@/components/dashboard/TradeTable'
+import TickerSearchBar from '@/components/TickerSearchBar'
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { SidebarProvider } from '@/components/ui/sidebar'
@@ -115,7 +116,9 @@ const Home = () => {
   }
 
   return (
-    <div className="mx-auto max-w-7xl p-4 sm:p-6">
+    <div className="mx-auto max-w-7xl p-4">
+      <TickerSearchBar className="mb-4" />
+
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
 
         <TabsList className="grid w-full grid-cols-3">
