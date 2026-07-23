@@ -49,6 +49,22 @@ const resolveStock = async (rawTicker: string): Promise<StockResponse> => {
   })
 }
 
+// used by the search bar
+const searchStock = async (rawTicker: string): Promise<StockResponse> => {
+  const ticker = rawTicker.trim().toUpperCase()
+  if (!ticker) {
+    throw new Error('Ticker is required')
+  }
+
+  try {
+    return await stockService.getStockByID(ticker)
+  } catch {
+    // not in Supabase yet, ask the backend to validate it
+    return resolveStock(ticker)
+  }
+}
+
 export const stockHooks = {
   resolveStock,
+  searchStock,
 }
