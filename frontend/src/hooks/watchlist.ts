@@ -1,6 +1,7 @@
 import { stockService } from "@/db/stock"
 import { watchlistStockService } from "@/db/watchlist_stock"
 import { fetchTickerPrices } from "@/api/ticker"
+import { stockHooks } from "@/hooks/stock"
 import type { StockResponse, StocklistResponse, WatchlistStockDisplay } from "@/types/stock"
 
 const fetchStocks= async () => {
@@ -40,9 +41,7 @@ const addStock = async (newTicker: string) => {
     return
   }
 
-  const stock = await stockService.getStockByID(
-    newTicker.toUpperCase()
-  )
+  const stock = await stockHooks.resolveStock(newTicker)
   await watchlistStockService.createWatchlistStock({ stock_ticker: stock.ticker })
 }
 

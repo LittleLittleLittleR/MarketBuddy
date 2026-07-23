@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import type { TablesUpdate } from '@/types/supabase';
+import type { TablesInsert, TablesUpdate } from '@/types/supabase';
 import { dbAuth } from './auth/auth';
 
 const getStocks = async () => {
@@ -101,10 +101,26 @@ const updateStock = async (
   return data;
 };
 
+// inserts a stock row if new
+// else overwrite existing price fields
+const upsertStock = async (stock: TablesInsert<'stocks'>) => {
+  const { data, error } = await supabase
+    .from('stocks')
+    .upsert(stock, { onConflict: 'ticker' })
+    .select()
+    .single();
+
+  if (error) {
+    throw error;
+  }
+  return data;
+};
+
 export const stockService = {
   getStocks,
   getMyStocksByWatchlist,
   getStocksByPortfolio,
   getStockByID,
   updateStock,
+  upsertStock,
 };
